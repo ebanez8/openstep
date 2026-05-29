@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-label="OpenSteps screenshot placeholder">
+  <rect width="960" height="540" fill="#f5f7fa"/>
+  <rect x="80" y="72" width="800" height="396" rx="8" fill="#ffffff" stroke="#d9dee8" stroke-width="2"/>
+  <rect x="80" y="72" width="800" height="56" rx="8" fill="#151a24"/>
+  <circle cx="114" cy="100" r="8" fill="#d92d20"/>
+  <rect x="144" y="92" width="154" height="16" rx="4" fill="#ffffff" opacity="0.9"/>
+  <rect x="122" y="168" width="276" height="184" rx="6" fill="#eef2f7" stroke="#cbd5e1"/>
+  <circle cx="260" cy="260" r="28" fill="none" stroke="#d92d20" stroke-width="8"/>
+  <rect x="430" y="168" width="310" height="24" rx="4" fill="#151a24"/>
+  <rect x="430" y="214" width="378" height="14" rx="4" fill="#6b7280"/>
+  <rect x="430" y="244" width="332" height="14" rx="4" fill="#9aa4b2"/>
+  <rect x="430" y="296" width="150" height="36" rx="5" fill="#2563eb"/>
+  <text x="480" y="505" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="22" fill="#3b4454">OpenSteps screenshot placeholder</text>
+</svg>
