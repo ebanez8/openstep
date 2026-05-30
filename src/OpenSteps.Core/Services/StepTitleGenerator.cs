@@ -6,35 +6,45 @@ public sealed class StepTitleGenerator
 {
     public string Generate(RecordedStep step)
     {
+        return GenerateWithReason(step).Title;
+    }
+
+    public StepTitleResult GenerateWithReason(RecordedStep step)
+    {
         var name = Clean(step.ElementName);
         var controlType = Clean(step.ControlType);
 
-        if (!string.IsNullOrWhiteSpace(name))
+        if (step.UsefulElementFound && !string.IsNullOrWhiteSpace(name))
         {
             if (IsControlType(controlType, "Button"))
             {
-                return $"Click \"{name}\"";
+                return new StepTitleResult($"Click \"{name}\"", "useful Button element name");
             }
 
             if (IsControlType(controlType, "MenuItem"))
             {
-                return $"Select \"{name}\"";
+                return new StepTitleResult($"Select \"{name}\"", "useful MenuItem element name");
             }
 
             if (IsControlType(controlType, "Edit"))
             {
-                return $"Click the \"{name}\" field";
+                return new StepTitleResult($"Click the \"{name}\" field", "useful Edit element name");
             }
 
-            return $"Click \"{name}\"";
+            return new StepTitleResult($"Click \"{name}\"", "useful UI Automation element name");
         }
 
         if (!string.IsNullOrWhiteSpace(step.WindowTitle))
         {
-            return $"Click in {step.WindowTitle}";
+            return new StepTitleResult($"Click in {step.WindowTitle}", "window title fallback");
         }
 
-        return $"Click at screen position ({step.ClickX}, {step.ClickY})";
+        if (!string.IsNullOrWhiteSpace(step.ProcessName))
+        {
+            return new StepTitleResult($"Click in {step.ProcessName}", "process name fallback");
+        }
+
+        return new StepTitleResult($"Click at screen position ({step.ClickX}, {step.ClickY})", "coordinate fallback");
     }
 
     private static bool IsControlType(string? actual, string expected)
@@ -47,3 +57,5 @@ public sealed class StepTitleGenerator
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 }
+
+public sealed record StepTitleResult(string Title, string Reason);

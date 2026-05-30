@@ -32,6 +32,20 @@ internal static partial class NativeMethods
     [LibraryImport("user32.dll")]
     internal static partial IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
 
+    [LibraryImport("user32.dll")]
+    internal static partial IntPtr GetThreadDpiAwarenessContext();
+
+    [LibraryImport("user32.dll")]
+    internal static partial DPI_AWARENESS GetAwarenessFromDpiAwarenessContext(IntPtr value);
+
+    internal enum DPI_AWARENESS
+    {
+        DPI_AWARENESS_INVALID = -1,
+        DPI_AWARENESS_UNAWARE = 0,
+        DPI_AWARENESS_SYSTEM_AWARE = 1,
+        DPI_AWARENESS_PER_MONITOR_AWARE = 2
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     internal struct POINT
     {

@@ -6,7 +6,7 @@ OpenSteps is a modern open-source Steps Recorder for Windows. It records desktop
 
 ## Features
 
-- No cloud, no account, no telemetry.
+- No cloud, no account, no telemetry, and no uploads.
 - Local-first recording with screenshots and click metadata.
 - Global left-click capture across desktop apps.
 - UI Automation metadata for useful editable step titles.
@@ -35,11 +35,11 @@ dotnet run --project src/OpenSteps.App
 
 ## Privacy
 
-OpenSteps records screenshots and click metadata locally. It does not upload anything. The MVP does not record typed text, use AI features, or require internet access.
+OpenSteps records screenshots and click metadata locally. It does not upload anything, does not require an account, and does not include telemetry. The MVP does not record typed text, use AI features, or require internet access. Screenshots may contain sensitive information, so review captured steps before sharing or exporting.
 
 ## Roadmap
 
-- Save and reopen recording sessions.
+- Reopen older sessions from a full saved-session list.
 - Better toolbar placement and multi-monitor polish.
 - Richer UI Automation captions.
 - Optional redaction tools before export.

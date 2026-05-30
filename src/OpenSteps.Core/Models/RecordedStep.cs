@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace OpenSteps.Core.Models;
 
 public sealed class RecordedStep
@@ -14,6 +16,7 @@ public sealed class RecordedStep
 
     public int ClickY { get; set; }
 
+    [JsonIgnore]
     public IntPtr ActiveWindowHandle { get; set; }
 
     public string? WindowTitle { get; set; }
@@ -44,6 +47,28 @@ public sealed class RecordedStep
 
     public string? CaptureError { get; set; }
 
+    public bool ScreenshotCaptured { get; set; }
+
+    public bool UiAutomationSucceeded { get; set; }
+
+    public UiAutomationQuality UiAutomationQuality { get; set; } = UiAutomationQuality.UiAutomationFailed;
+
+    public bool UsefulElementFound { get; set; }
+
+    public string? RawElementDebug { get; set; }
+
+    public string? ParentChainDebug { get; set; }
+
+    public string? CandidateElementsDebug { get; set; }
+
+    public string? GeneratedTitleReason { get; set; }
+
+    public ScreenBounds? VirtualScreenBounds { get; set; }
+
+    public bool? ClickInsideActiveWindowBounds { get; set; }
+
+    public string? ProcessDpiAwareness { get; set; }
+
     public string DisplayTitle => string.IsNullOrWhiteSpace(UserTitle) ? GeneratedTitle : UserTitle!;
 
     public string MetadataSummary
@@ -53,17 +78,49 @@ public sealed class RecordedStep
             var lines = new List<string>
             {
                 $"Click: ({ClickX}, {ClickY})",
+                $"Virtual screen: {FormatBounds(VirtualScreenBounds)}",
+                $"Active window bounds: {FormatBounds(WindowBounds)}",
+                $"Click inside active window: {FormatBool(ClickInsideActiveWindowBounds)}",
+                $"Process DPI awareness: {ProcessDpiAwareness ?? "(unknown)"}",
+                $"Screenshot captured: {(ScreenshotCaptured ? "yes" : "no")}",
+                $"UI Automation status: {UiAutomationQuality}",
+                $"UI Automation returned element: {(UiAutomationSucceeded ? "yes" : "no")}",
+                $"Useful element found: {(UsefulElementFound ? "yes" : "no")}",
+                $"Screenshot: {ScreenshotPath ?? "(none)"}",
                 $"Window: {WindowTitle ?? "(unknown)"}",
                 $"Process: {ProcessName ?? "(unknown)"}",
                 $"Element: {ElementName ?? "(unknown)"}",
                 $"Control: {ControlType ?? "(unknown)"}",
                 $"AutomationId: {AutomationId ?? "(none)"}",
-                $"Class: {ClassName ?? "(none)"}"
+                $"Class: {ClassName ?? "(none)"}",
+                $"Element bounds: {FormatBounds(ElementBounds)}",
+                $"Generated title reason: {GeneratedTitleReason ?? "(unknown)"}"
             };
 
             if (!string.IsNullOrWhiteSpace(ParentElementName))
             {
                 lines.Add($"Parent: {ParentElementName}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(RawElementDebug))
+            {
+                lines.Add("");
+                lines.Add("Raw element:");
+                lines.Add(RawElementDebug);
+            }
+
+            if (!string.IsNullOrWhiteSpace(ParentChainDebug))
+            {
+                lines.Add("");
+                lines.Add("Parent chain:");
+                lines.Add(ParentChainDebug);
+            }
+
+            if (!string.IsNullOrWhiteSpace(CandidateElementsDebug))
+            {
+                lines.Add("");
+                lines.Add("Candidate child elements:");
+                lines.Add(CandidateElementsDebug);
             }
 
             if (!string.IsNullOrWhiteSpace(CaptureError))
@@ -73,5 +130,17 @@ public sealed class RecordedStep
 
             return string.Join(Environment.NewLine, lines);
         }
+    }
+
+    private static string FormatBounds(ScreenBounds? bounds)
+    {
+        return bounds is { } value
+            ? $"({value.X}, {value.Y}) {value.Width}x{value.Height}"
+            : "(unknown)";
+    }
+
+    private static string FormatBool(bool? value)
+    {
+        return value.HasValue ? (value.Value ? "yes" : "no") : "(unknown)";
     }
 }

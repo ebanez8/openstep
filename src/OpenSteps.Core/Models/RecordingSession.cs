@@ -10,5 +10,5 @@ public sealed class RecordingSession
 
     public string OutputDirectory { get; set; } = string.Empty;
 
-    public List<RecordedStep> Steps { get; } = [];
+    public List<RecordedStep> Steps { get; set; } = [];
 }

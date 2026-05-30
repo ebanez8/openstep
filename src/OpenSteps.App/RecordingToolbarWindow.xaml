@@ -3,7 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="OpenSteps Recording" Width="380" Height="72"
         WindowStyle="ToolWindow" ResizeMode="NoResize" Topmost="True"
-        ShowInTaskbar="False" Background="White">
+        ShowInTaskbar="False" Background="White"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown"
+        LocationChanged="Window_LocationChanged"
+        SourceInitialized="Window_SourceInitialized">
     <Border BorderBrush="#D9DEE8" BorderThickness="1" Padding="12">
         <Grid>
             <Grid.ColumnDefinitions>

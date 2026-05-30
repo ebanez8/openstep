@@ -8,4 +8,9 @@ public sealed record UiElementInfo(
     string? ControlType,
     string? ClassName,
     ScreenBounds? Bounds,
-    string? ParentName);
+    string? ParentName,
+    UiAutomationQuality Quality,
+    bool UsefulElementFound,
+    string RawElementDebug,
+    string ParentChainDebug,
+    string CandidateElementsDebug);

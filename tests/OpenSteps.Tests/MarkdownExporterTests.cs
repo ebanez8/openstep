@@ -35,4 +35,37 @@ public sealed class MarkdownExporterTests
         Assert.Contains("![Step 1](images/step-001.png)", markdown);
         Assert.Contains("Choose the main menu.", markdown);
     }
+
+    [Fact]
+    public async Task ExportAsync_UsesAvailableFolderWhenGuideAlreadyExists()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "OpenSteps.Tests", Guid.NewGuid().ToString("N"));
+        var export = Path.Combine(temp, "export");
+        Directory.CreateDirectory(export);
+        await File.WriteAllTextAsync(Path.Combine(export, "guide.md"), "existing");
+
+        var session = new RecordingSession { Title = "Conflict Test" };
+        session.Steps.Add(new RecordedStep { GeneratedTitle = "Click" });
+
+        var guidePath = await new MarkdownExporter().ExportAsync(session, export);
+
+        Assert.NotEqual(Path.Combine(export, "guide.md"), guidePath);
+        Assert.EndsWith(Path.Combine("export-001", "guide.md"), guidePath);
+        Assert.True(File.Exists(guidePath));
+    }
+
+    [Fact]
+    public async Task ExportAsync_UsesCurrentStepOrder()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "OpenSteps.Tests", Guid.NewGuid().ToString("N"));
+        var session = new RecordingSession { Title = "Order Test" };
+        session.Steps.Add(new RecordedStep { GeneratedTitle = "Second" });
+        session.Steps.Add(new RecordedStep { GeneratedTitle = "First" });
+        session.Steps.Reverse();
+
+        var guidePath = await new MarkdownExporter().ExportAsync(session, temp);
+        var markdown = await File.ReadAllTextAsync(guidePath);
+
+        Assert.True(markdown.IndexOf("## Step 1: First", StringComparison.Ordinal) < markdown.IndexOf("## Step 2: Second", StringComparison.Ordinal));
+    }
 }

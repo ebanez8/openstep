@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -15,8 +16,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly ActiveWindowService _activeWindowService = new();
     private readonly ScreenshotService _screenshotService = new();
     private readonly UiAutomationService _uiAutomationService = new();
+    private readonly DpiAwarenessService _dpiAwarenessService = new();
     private readonly StepTitleGenerator _titleGenerator = new();
     private readonly MarkdownExporter _markdownExporter = new();
+    private readonly SessionStore _sessionStore = new();
     private readonly SemaphoreSlim _captureLock = new(1, 1);
 
     private RecordingSession _session = new();
@@ -30,6 +33,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         InitializeComponent();
         DataContext = this;
         ResetSession();
+        Closing += MainWindow_Closing;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -56,21 +60,32 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private async Task StartRecordingAsync()
     {
         EnsureSession();
+        StopHook();
         _isRecording = true;
         _isPaused = false;
 
-        _toolbar?.Close();
-        _toolbar = new RecordingToolbarWindow();
-        _toolbar.PauseToggled += (_, _) => _isPaused = _toolbar.IsPaused;
-        _toolbar.StopRequested += (_, _) => StopRecording();
-        _toolbar.SetStepCount(Steps.Count);
-        _toolbar.Show();
-        _toolbar.StartClock();
+        try
+        {
+            _toolbar?.Close();
+            _toolbar = new RecordingToolbarWindow();
+            _toolbar.PauseToggled += (_, _) => _isPaused = _toolbar.IsPaused;
+            _toolbar.StopRequested += async (_, _) => await StopRecordingAsync();
+            _toolbar.SetStepCount(Steps.Count);
+            _toolbar.Show();
+            _toolbar.StartClock();
 
-        _mouseHook?.Dispose();
-        _mouseHook = new GlobalMouseHook(ShouldIgnoreClick);
-        _mouseHook.ClickCaptured += MouseHook_ClickCaptured;
-        _mouseHook.Start();
+            _mouseHook = new GlobalMouseHook(ShouldIgnoreClick);
+            _mouseHook.ClickCaptured += MouseHook_ClickCaptured;
+            _mouseHook.Start();
+        }
+        catch (Exception ex)
+        {
+            CleanupRecordingUi();
+            _isRecording = false;
+            _isPaused = false;
+            WinForms.MessageBox.Show($"Recording could not start:\n{ex.Message}", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error);
+            return;
+        }
 
         WindowState = WindowState.Minimized;
         await Task.CompletedTask;
@@ -78,7 +93,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private bool ShouldIgnoreClick(int x, int y)
     {
-        return _toolbar?.ContainsScreenPoint(x, y) == true;
+        return _toolbar?.ContainsScreenPoint(x, y) == true || ContainsMainWindowPoint(x, y);
     }
 
     private void MouseHook_ClickCaptured(object? sender, ClickCapturedEventArgs e)
@@ -105,7 +120,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 Index = Steps.Count + 1,
                 ClickX = x,
-                ClickY = y
+                ClickY = y,
+                VirtualScreenBounds = GetVirtualScreenBounds(),
+                ProcessDpiAwareness = _dpiAwarenessService.GetCurrentThreadAwareness()
             };
 
             try
@@ -116,6 +133,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 step.ProcessName = activeWindow.ProcessName;
                 step.ExecutablePath = activeWindow.ExecutablePath;
                 step.WindowBounds = activeWindow.Bounds;
+                step.ClickInsideActiveWindowBounds = ContainsBounds(activeWindow.Bounds, x, y);
             }
             catch (Exception ex)
             {
@@ -125,6 +143,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             try
             {
                 var element = _uiAutomationService.GetElementAt(x, y);
+                step.UiAutomationSucceeded = element.Quality != UiAutomationQuality.UiAutomationFailed;
+                step.UiAutomationQuality = element.Quality;
+                step.UsefulElementFound = element.UsefulElementFound;
+                step.RawElementDebug = element.RawElementDebug;
+                step.ParentChainDebug = element.ParentChainDebug;
+                step.CandidateElementsDebug = element.CandidateElementsDebug;
                 if (element is not null)
                 {
                     step.ElementName = element.Name;
@@ -140,15 +164,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 step.CaptureError = AppendError(step.CaptureError, $"UI Automation failed: {ex.Message}");
             }
 
-            step.GeneratedTitle = _titleGenerator.Generate(step);
+            var title = _titleGenerator.GenerateWithReason(step);
+            step.GeneratedTitle = title.Title;
+            step.GeneratedTitleReason = title.Reason;
             step.UserTitle = step.GeneratedTitle;
 
             try
             {
                 step.ScreenshotPath = await _screenshotService.CaptureVirtualDesktopAsync(_session.OutputDirectory, step.Index, x, y);
+                step.ScreenshotCaptured = true;
             }
             catch (Exception ex)
             {
+                step.ScreenshotCaptured = false;
                 step.CaptureError = AppendError(step.CaptureError, $"Screenshot failed: {ex.Message}");
             }
 
@@ -163,25 +191,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
-    private void StopRecording()
+    private async Task StopRecordingAsync()
     {
         _isRecording = false;
         _isPaused = false;
-
-        if (_mouseHook is not null)
-        {
-            _mouseHook.ClickCaptured -= MouseHook_ClickCaptured;
-            _mouseHook.Dispose();
-            _mouseHook = null;
-        }
-
-        _toolbar?.Close();
-        _toolbar = null;
+        StopHook();
+        CleanupRecordingUi();
 
         WindowState = WindowState.Normal;
         Show();
         Activate();
         ShowEditor();
+        await SaveSessionAsync(showMessage: false);
     }
 
     private async void ExportMarkdown_Click(object sender, RoutedEventArgs e)
@@ -199,13 +220,54 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         try
         {
+            SyncSessionOrder();
             _session.Title = SessionTitleBox.Text;
+            await SaveSessionAsync(showMessage: false);
             var path = await _markdownExporter.ExportAsync(_session, dialog.SelectedPath);
-            WinForms.MessageBox.Show($"Exported guide:\n{path}", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Information);
+            var result = WinForms.MessageBox.Show(
+                $"Exported guide:\n{path}\n\nOpen the export folder now?",
+                "OpenSteps",
+                WinForms.MessageBoxButtons.YesNo,
+                WinForms.MessageBoxIcon.Information);
+
+            if (result == WinForms.DialogResult.Yes)
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"/select,\"{path}\"",
+                    UseShellExecute = true
+                });
+            }
         }
         catch (Exception ex)
         {
             WinForms.MessageBox.Show($"Export failed:\n{ex.Message}", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error);
+        }
+    }
+
+    private async void SaveSession_Click(object sender, RoutedEventArgs e)
+    {
+        await SaveSessionAsync(showMessage: true);
+    }
+
+    private async void OpenPreviousSession_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var session = await _sessionStore.LoadLatestAsync();
+            if (session is null)
+            {
+                WinForms.MessageBox.Show("No saved OpenSteps sessions were found.", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Information);
+                return;
+            }
+
+            LoadSession(session);
+            ShowEditor();
+        }
+        catch (Exception ex)
+        {
+            WinForms.MessageBox.Show($"Could not open the latest session:\n{ex.Message}", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error);
         }
     }
 
@@ -217,6 +279,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             _session.Steps.Remove(step);
             RenumberSteps();
             UpdateSessionSummary();
+            _ = SaveSessionAsync(showMessage: false);
         }
     }
 
@@ -232,6 +295,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             Steps.Move(index, index - 1);
             SyncSessionOrder();
+            _ = SaveSessionAsync(showMessage: false);
         }
     }
 
@@ -247,6 +311,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             Steps.Move(index, index + 1);
             SyncSessionOrder();
+            _ = SaveSessionAsync(showMessage: false);
         }
     }
 
@@ -255,6 +320,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (_session is not null)
         {
             _session.Title = SessionTitleBox.Text;
+        }
+    }
+
+    private async void MainWindow_Closing(object? sender, CancelEventArgs e)
+    {
+        StopHook();
+        CleanupRecordingUi();
+        if (Steps.Count > 0)
+        {
+            try
+            {
+                await SaveSessionAsync(showMessage: false);
+            }
+            catch
+            {
+                // Closing should never be blocked by persistence failures.
+            }
         }
     }
 
@@ -278,6 +360,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         Directory.CreateDirectory(_session.OutputDirectory);
         Steps.Clear();
+        SessionTitleBox.Text = _session.Title;
+        UpdateSessionSummary();
+    }
+
+    private void LoadSession(RecordingSession session)
+    {
+        StopHook();
+        CleanupRecordingUi();
+        _isRecording = false;
+        _isPaused = false;
+        _session = session;
+        Steps.Clear();
+        foreach (var step in _session.Steps.OrderBy(step => step.Index))
+        {
+            Steps.Add(step);
+        }
+
+        RenumberSteps();
         SessionTitleBox.Text = _session.Title;
         UpdateSessionSummary();
     }
@@ -320,8 +420,77 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void UpdateSessionSummary()
     {
-        SessionSummaryText.Text = $"{Steps.Count} captured step{(Steps.Count == 1 ? string.Empty : "s")} · Local session folder: {_session.OutputDirectory}";
+        SessionSummaryText.Text = $"{Steps.Count} captured step{(Steps.Count == 1 ? string.Empty : "s")} - Local session folder: {_session.OutputDirectory}";
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Steps)));
+    }
+
+    private async Task SaveSessionAsync(bool showMessage)
+    {
+        SyncSessionOrder();
+        _session.Title = SessionTitleBox.Text;
+        var path = await _sessionStore.SaveAsync(_session);
+        UpdateSessionSummary();
+
+        if (showMessage)
+        {
+            WinForms.MessageBox.Show($"Saved session:\n{path}", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Information);
+        }
+    }
+
+    private void StopHook()
+    {
+        if (_mouseHook is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _mouseHook.ClickCaptured -= MouseHook_ClickCaptured;
+            _mouseHook.Dispose();
+        }
+        finally
+        {
+            _mouseHook = null;
+        }
+    }
+
+    private void CleanupRecordingUi()
+    {
+        try
+        {
+            _toolbar?.Close();
+        }
+        finally
+        {
+            _toolbar = null;
+        }
+    }
+
+    private bool ContainsMainWindowPoint(int x, int y)
+    {
+        if (!IsVisible || WindowState == WindowState.Minimized)
+        {
+            return false;
+        }
+
+        var point = PointFromScreen(new System.Windows.Point(x, y));
+        return point.X >= 0 && point.Y >= 0 && point.X <= ActualWidth && point.Y <= ActualHeight;
+    }
+
+    private static ScreenBounds GetVirtualScreenBounds()
+    {
+        var bounds = WinForms.SystemInformation.VirtualScreen;
+        return new ScreenBounds(bounds.X, bounds.Y, bounds.Width, bounds.Height);
+    }
+
+    private static bool ContainsBounds(ScreenBounds? bounds, int x, int y)
+    {
+        return bounds is { } value
+            && x >= value.X
+            && y >= value.Y
+            && x <= value.X + value.Width
+            && y <= value.Y + value.Height;
     }
 
     private static string AppendError(string? existing, string next)
