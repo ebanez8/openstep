@@ -20,6 +20,15 @@
                 <TextBlock Text="OpenSteps records screenshots and click metadata locally. It does not upload anything. Typed text is not recorded, but screenshots may contain sensitive information; review before sharing."
                            Margin="0,28,0,0" TextWrapping="Wrap" FontSize="14" Foreground="#5F6B7A" />
 
+                <StackPanel Margin="0,24,0,0" MaxWidth="360">
+                    <TextBlock Text="Screenshot mode" FontWeight="SemiBold" Foreground="#3B4454" />
+                    <ComboBox ItemsSource="{Binding ScreenshotCaptureModes}"
+                              SelectedItem="{Binding ScreenshotCaptureMode, Mode=TwoWay}"
+                              Margin="0,8,0,0" Padding="8,5" />
+                    <TextBlock Text="Monitor containing click is recommended. Full virtual desktop is legacy/debug."
+                               Margin="0,7,0,0" TextWrapping="Wrap" FontSize="12" Foreground="#6B7280" />
+                </StackPanel>
+
                 <StackPanel Orientation="Horizontal" Margin="0,34,0,0">
                     <Button Content="Start Recording" Click="StartRecording_Click"
                             Padding="24,12" FontSize="16" FontWeight="SemiBold" />

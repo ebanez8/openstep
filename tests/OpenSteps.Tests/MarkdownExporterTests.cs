@@ -68,4 +68,26 @@ public sealed class MarkdownExporterTests
 
         Assert.True(markdown.IndexOf("## Step 1: First", StringComparison.Ordinal) < markdown.IndexOf("## Step 2: Second", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public async Task ExportAsync_WritesImagesInCurrentStepOrder()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "OpenSteps.Tests", Guid.NewGuid().ToString("N"));
+        var source = Path.Combine(temp, "source");
+        Directory.CreateDirectory(source);
+
+        var firstImage = Path.Combine(source, "first.png");
+        var secondImage = Path.Combine(source, "second.png");
+        await File.WriteAllBytesAsync(firstImage, [1]);
+        await File.WriteAllBytesAsync(secondImage, [2]);
+
+        var session = new RecordingSession { Title = "Image Order Test" };
+        session.Steps.Add(new RecordedStep { GeneratedTitle = "First", ScreenshotPath = firstImage });
+        session.Steps.Add(new RecordedStep { GeneratedTitle = "Second", ScreenshotPath = secondImage });
+
+        await new MarkdownExporter().ExportAsync(session, temp);
+
+        Assert.Equal([1], await File.ReadAllBytesAsync(Path.Combine(temp, "images", "step-001.png")));
+        Assert.Equal([2], await File.ReadAllBytesAsync(Path.Combine(temp, "images", "step-002.png")));
+    }
 }

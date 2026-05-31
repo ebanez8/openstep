@@ -18,6 +18,38 @@ public sealed class RecordedStep
 
     public int ClickY { get; set; }
 
+    public int? LocalClickX { get; set; }
+
+    public int? LocalClickY { get; set; }
+
+    public string? MonitorDeviceName { get; set; }
+
+    public int? MonitorIndex { get; set; }
+
+    public int? MonitorBoundsLeft { get; set; }
+
+    public int? MonitorBoundsTop { get; set; }
+
+    public int? MonitorBoundsRight { get; set; }
+
+    public int? MonitorBoundsBottom { get; set; }
+
+    public int? MonitorWidth { get; set; }
+
+    public int? MonitorHeight { get; set; }
+
+    public bool? IsPrimaryMonitor { get; set; }
+
+    public uint? MonitorDpiX { get; set; }
+
+    public uint? MonitorDpiY { get; set; }
+
+    public ScreenshotCaptureMode ScreenshotCaptureMode { get; set; } = ScreenshotCaptureMode.MonitorContainingClick;
+
+    public int? ScreenshotWidth { get; set; }
+
+    public int? ScreenshotHeight { get; set; }
+
     [JsonIgnore]
     public IntPtr ActiveWindowHandle { get; set; }
 
@@ -95,7 +127,15 @@ public sealed class RecordedStep
         {
             var lines = new List<string>
             {
-                $"Click: ({ClickX}, {ClickY})",
+                $"Click absolute: ({ClickX}, {ClickY})",
+                $"Click local in screenshot: {FormatPoint(LocalClickX, LocalClickY)}",
+                $"Detected monitor: {MonitorDeviceName ?? "(unknown)"}",
+                $"Monitor index: {(MonitorIndex.HasValue ? MonitorIndex.Value.ToString() : "(unknown)")}",
+                $"Primary monitor: {FormatBool(IsPrimaryMonitor)}",
+                $"Monitor bounds: {FormatMonitorBounds()}",
+                $"Monitor size: {FormatSize(MonitorWidth, MonitorHeight)}",
+                $"Monitor DPI: {FormatDpi()}",
+                $"Capture mode: {ScreenshotCaptureMode}",
                 $"Action type: {ActionType}",
                 $"Keyboard input detected: {(KeyboardInputDetected ? "yes" : "no")}",
                 $"Key count: {(KeyCount.HasValue ? KeyCount.Value.ToString() : "(not stored)")}",
@@ -106,6 +146,7 @@ public sealed class RecordedStep
                 $"Sensitive input: {(IsSensitiveInput ? "yes" : "no")}",
                 $"Typed characters stored: {(TypedCharactersStored ? "yes" : "no")}",
                 $"Virtual screen: {FormatBounds(VirtualScreenBounds)}",
+                $"Screenshot size: {FormatSize(ScreenshotWidth, ScreenshotHeight)}",
                 $"Active window bounds: {FormatBounds(WindowBounds)}",
                 $"Click inside active window: {FormatBool(ClickInsideActiveWindowBounds)}",
                 $"Process DPI awareness: {ProcessDpiAwareness ?? "(unknown)"}",
@@ -164,6 +205,31 @@ public sealed class RecordedStep
         return bounds is { } value
             ? $"({value.X}, {value.Y}) {value.Width}x{value.Height}"
             : "(unknown)";
+    }
+
+    private string FormatMonitorBounds()
+    {
+        return MonitorBoundsLeft.HasValue
+            && MonitorBoundsTop.HasValue
+            && MonitorBoundsRight.HasValue
+            && MonitorBoundsBottom.HasValue
+            ? $"left={MonitorBoundsLeft}, top={MonitorBoundsTop}, right={MonitorBoundsRight}, bottom={MonitorBoundsBottom}"
+            : "(unknown)";
+    }
+
+    private static string FormatPoint(int? x, int? y)
+    {
+        return x.HasValue && y.HasValue ? $"({x}, {y})" : "(unknown)";
+    }
+
+    private static string FormatSize(int? width, int? height)
+    {
+        return width.HasValue && height.HasValue ? $"{width}x{height}" : "(unknown)";
+    }
+
+    private string FormatDpi()
+    {
+        return MonitorDpiX.HasValue && MonitorDpiY.HasValue ? $"{MonitorDpiX}x{MonitorDpiY}" : "(unknown)";
     }
 
     private static string FormatBool(bool? value)

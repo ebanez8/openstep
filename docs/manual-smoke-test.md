@@ -34,11 +34,27 @@ Use this checklist before demoing OpenSteps.
 12. Open the exported folder when prompted.
 13. Open `guide.md` and verify relative image links under `images/` work.
 
+## Multi-Monitor Capture
+
+1. Connect two monitors.
+2. Put Notepad on monitor 1.
+3. Put File Explorer or Settings on monitor 2.
+4. Start recording with screenshot mode set to **MonitorContainingClick**.
+5. Click Notepad on monitor 1.
+6. Click File Explorer or Settings on monitor 2.
+7. Stop recording.
+8. Verify step 1 screenshot only shows monitor 1.
+9. Verify step 2 screenshot only shows monitor 2.
+10. Verify the click highlight appears in the correct place for click steps.
+11. Test a secondary monitor placed left of the primary if possible.
+12. Test different DPI scaling on the monitors if possible.
+13. Expand **Capture debug/status** and verify monitor device, bounds, screenshot size, and local click coordinates match the captured image.
+
 ## Known Capture Edge Cases
 
 - Some apps expose little or no UI Automation metadata; screenshots and click coordinates should still be captured.
-- Multi-monitor screenshots use the full virtual desktop, so images can be large.
-- High-DPI scaling can affect screenshot size and click-highlight placement; verify on scaled displays.
+- Full virtual desktop capture is available as a legacy/debug screenshot mode and can create large images.
+- High-DPI scaling can affect app and toolbar positioning; verify on scaled displays.
 - Elevated/admin apps may block metadata or hook behavior when OpenSteps is not also elevated.
 - Full-screen apps may hide the toolbar or interfere with global hooks.
 - Screenshots can include private data. Review steps before sharing or exporting.

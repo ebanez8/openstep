@@ -17,7 +17,8 @@ namespace OpenSteps.App;
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
     private readonly ActiveWindowService _activeWindowService = new();
-    private readonly ScreenshotService _screenshotService = new();
+    private readonly MonitorService _monitorService = new();
+    private readonly ScreenshotService _screenshotService;
     private readonly UiAutomationService _uiAutomationService = new();
     private readonly DpiAwarenessService _dpiAwarenessService = new();
     private readonly StepTitleGenerator _titleGenerator = new();
@@ -34,9 +35,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private int _pendingTypingKeyCount;
     private bool _isRecording;
     private bool _isPaused;
+    private ScreenshotCaptureMode _screenshotCaptureMode = ScreenshotCaptureMode.MonitorContainingClick;
 
     public MainWindow()
     {
+        _screenshotService = new ScreenshotService(_monitorService);
         InitializeComponent();
         DataContext = this;
         _typingTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(850) };
@@ -48,6 +51,27 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public ObservableCollection<RecordedStep> Steps { get; } = [];
+
+    public ScreenshotCaptureMode[] ScreenshotCaptureModes { get; } =
+    [
+        ScreenshotCaptureMode.MonitorContainingClick,
+        ScreenshotCaptureMode.FullVirtualDesktop
+    ];
+
+    public ScreenshotCaptureMode ScreenshotCaptureMode
+    {
+        get => _screenshotCaptureMode;
+        set
+        {
+            if (_screenshotCaptureMode == value)
+            {
+                return;
+            }
+
+            _screenshotCaptureMode = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ScreenshotCaptureMode)));
+        }
+    }
 
     private async void StartRecording_Click(object sender, RoutedEventArgs e)
     {
@@ -197,7 +221,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
             try
             {
-                step.ScreenshotPath = await _screenshotService.CaptureVirtualDesktopAsync(_session.OutputDirectory, step.Index, x, y);
+                var screenshot = await _screenshotService.CaptureAsync(_session.OutputDirectory, step.Index, x, y, ScreenshotCaptureMode);
+                ApplyScreenshotResult(step, screenshot);
                 step.ScreenshotCaptured = true;
             }
             catch (Exception ex)
@@ -339,6 +364,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             TypedCharactersStored = false,
             ScreenshotPath = previous?.ScreenshotPath,
             ScreenshotCaptured = previous?.ScreenshotCaptured == true,
+            ClickX = previous?.ClickX ?? 0,
+            ClickY = previous?.ClickY ?? 0,
             VirtualScreenBounds = GetVirtualScreenBounds(),
             ProcessDpiAwareness = _dpiAwarenessService.GetCurrentThreadAwareness(),
             WindowTitle = previous?.WindowTitle,
@@ -380,27 +407,30 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         await Task.Delay(250);
         ApplyFocusedInputTarget(step);
-        await RefreshStepScreenshotAsync(step, "key");
+        await RefreshStepScreenshotAsync(step, "key", drawHighlight: false);
         StepsList.Items.Refresh();
         UpdateSessionSummary();
     }
 
-    private async Task RefreshStepScreenshotAsync(RecordedStep step, string suffix)
+    private async Task RefreshStepScreenshotAsync(RecordedStep step, string suffix, bool drawHighlight)
     {
-        if (step.IsSensitiveInput || step.ElementBounds is not { } bounds)
+        if (step.IsSensitiveInput)
         {
             return;
         }
 
-        var x = bounds.X + bounds.Width / 2;
-        var y = bounds.Y + bounds.Height / 2;
-        step.ClickX = x;
-        step.ClickY = y;
-        step.ClickInsideActiveWindowBounds = ContainsBounds(step.WindowBounds, x, y);
+        var captureX = step.ClickX;
+        var captureY = step.ClickY;
+        if (step.ElementBounds is { } bounds)
+        {
+            captureX = bounds.X + bounds.Width / 2;
+            captureY = bounds.Y + bounds.Height / 2;
+        }
 
         try
         {
-            step.ScreenshotPath = await _screenshotService.CaptureVirtualDesktopAsync(_session.OutputDirectory, $"step-{step.Index:000}-{suffix}.png", x, y);
+            var screenshot = await _screenshotService.CaptureAsync(_session.OutputDirectory, $"step-{step.Index:000}-{suffix}.png", captureX, captureY, ScreenshotCaptureMode, drawHighlight);
+            ApplyScreenshotResult(step, screenshot);
             step.ScreenshotCaptured = true;
         }
         catch (Exception ex)
@@ -415,7 +445,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _typingTimer.Stop();
         if (_pendingTypingStep is { } step)
         {
-            await RefreshStepScreenshotAsync(step, "text");
+            await RefreshStepScreenshotAsync(step, "text", drawHighlight: false);
         }
 
         _pendingTypingStep = null;
@@ -798,6 +828,27 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             && y >= value.Y
             && x <= value.X + value.Width
             && y <= value.Y + value.Height;
+    }
+
+    private static void ApplyScreenshotResult(RecordedStep step, ScreenshotCaptureResult screenshot)
+    {
+        step.ScreenshotPath = screenshot.FilePath;
+        step.ScreenshotCaptureMode = screenshot.CaptureMode;
+        step.LocalClickX = screenshot.LocalClickX;
+        step.LocalClickY = screenshot.LocalClickY;
+        step.ScreenshotWidth = screenshot.ScreenshotWidth;
+        step.ScreenshotHeight = screenshot.ScreenshotHeight;
+        step.MonitorDeviceName = screenshot.Monitor.DeviceName;
+        step.MonitorIndex = screenshot.Monitor.Index;
+        step.MonitorBoundsLeft = screenshot.Monitor.BoundsLeft;
+        step.MonitorBoundsTop = screenshot.Monitor.BoundsTop;
+        step.MonitorBoundsRight = screenshot.Monitor.BoundsRight;
+        step.MonitorBoundsBottom = screenshot.Monitor.BoundsBottom;
+        step.MonitorWidth = screenshot.Monitor.Width;
+        step.MonitorHeight = screenshot.Monitor.Height;
+        step.IsPrimaryMonitor = screenshot.Monitor.IsPrimary;
+        step.MonitorDpiX = screenshot.Monitor.DpiX;
+        step.MonitorDpiY = screenshot.Monitor.DpiY;
     }
 
     private static string AppendError(string? existing, string next)
