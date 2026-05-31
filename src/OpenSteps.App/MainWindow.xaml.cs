@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
+using System.Windows.Threading;
 using OpenSteps.Capture;
 using OpenSteps.Core.Models;
 using OpenSteps.Core.Services;
@@ -21,10 +23,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly MarkdownExporter _markdownExporter = new();
     private readonly SessionStore _sessionStore = new();
     private readonly SemaphoreSlim _captureLock = new(1, 1);
+    private readonly DispatcherTimer _typingTimer;
 
     private RecordingSession _session = new();
     private GlobalMouseHook? _mouseHook;
+    private GlobalKeyboardHook? _keyboardHook;
     private RecordingToolbarWindow? _toolbar;
+    private RecordedStep? _pendingTypingStep;
+    private int _pendingTypingKeyCount;
     private bool _isRecording;
     private bool _isPaused;
 
@@ -32,6 +38,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         InitializeComponent();
         DataContext = this;
+        _typingTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(850) };
+        _typingTimer.Tick += (_, _) => FinalizePendingTyping();
         ResetSession();
         Closing += MainWindow_Closing;
     }
@@ -60,7 +68,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private async Task StartRecordingAsync()
     {
         EnsureSession();
-        StopHook();
+        StopHooks();
         _isRecording = true;
         _isPaused = false;
 
@@ -77,6 +85,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             _mouseHook = new GlobalMouseHook(ShouldIgnoreClick);
             _mouseHook.ClickCaptured += MouseHook_ClickCaptured;
             _mouseHook.Start();
+
+            _keyboardHook = new GlobalKeyboardHook(ShouldIgnoreKeyboard);
+            _keyboardHook.KeyboardInputCaptured += KeyboardHook_KeyboardInputCaptured;
+            _keyboardHook.Start();
         }
         catch (Exception ex)
         {
@@ -104,6 +116,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         Dispatcher.BeginInvoke(async () => await CaptureStepAsync(e.X, e.Y));
+    }
+
+    private void KeyboardHook_KeyboardInputCaptured(object? sender, KeyboardInputEventArgs e)
+    {
+        if (!_isRecording || _isPaused)
+        {
+            return;
+        }
+
+        Dispatcher.BeginInvoke(() => HandleKeyboardInput(e));
     }
 
     private async Task CaptureStepAsync(int x, int y)
@@ -156,7 +178,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     step.ControlType = element.ControlType;
                     step.ClassName = element.ClassName;
                     step.ElementBounds = element.Bounds;
-                    step.ParentElementName = element.ParentName;
+                step.ParentElementName = element.ParentName;
+                    step.InputTargetName = element.IsEditable && element.UsefulElementFound ? element.Name : null;
+                    step.InputTargetControlType = element.ControlType;
+                    step.IsSensitiveInput = element.IsPassword;
                 }
             }
             catch (Exception ex)
@@ -191,11 +216,158 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
+    private void HandleKeyboardInput(KeyboardInputEventArgs input)
+    {
+        if (!_isRecording || _isPaused || ShouldIgnoreKeyboard())
+        {
+            return;
+        }
+
+        if (input.Kind == KeyboardInputKind.Text)
+        {
+            AddTextKeyToPendingStep();
+            return;
+        }
+
+        FinalizePendingTyping();
+        var actionType = input.Kind == KeyboardInputKind.Shortcut ? StepActionType.Shortcut : StepActionType.SpecialKey;
+        var step = CreateKeyboardActionStep(actionType, input.KeyName, input.ShortcutName);
+        Steps.Add(step);
+        RenumberSteps();
+        _toolbar?.SetStepCount(Steps.Count);
+        UpdateSessionSummary();
+    }
+
+    private void AddTextKeyToPendingStep()
+    {
+        var step = _pendingTypingStep ?? CreateOrUpdateTextEntryStep();
+        _pendingTypingStep = step;
+        _pendingTypingKeyCount++;
+        step.KeyboardInputDetected = true;
+        step.TypedCharactersStored = false;
+        step.KeyCount = step.IsSensitiveInput ? null : _pendingTypingKeyCount;
+
+        var title = _titleGenerator.GenerateWithReason(step);
+        step.GeneratedTitle = title.Title;
+        step.GeneratedTitleReason = title.Reason;
+        step.UserTitle = step.GeneratedTitle;
+
+        StepsList.Items.Refresh();
+        _typingTimer.Stop();
+        _typingTimer.Start();
+    }
+
+    private RecordedStep CreateOrUpdateTextEntryStep()
+    {
+        var previous = Steps.LastOrDefault();
+        if (previous is not null && previous.ActionType == StepActionType.Click)
+        {
+            ApplyFocusedInputTarget(previous);
+            previous.ActionType = StepActionType.TextEntry;
+            previous.KeyboardInputDetected = true;
+            previous.TypedCharactersStored = false;
+            previous.InputTargetName = IsEditableClickTarget(previous) && previous.UsefulElementFound ? previous.ElementName : previous.InputTargetName;
+            previous.InputTargetControlType = previous.ControlType;
+            return previous;
+        }
+
+        var step = CreateKeyboardActionStep(StepActionType.TextEntry, null, null);
+        Steps.Add(step);
+        RenumberSteps();
+        _toolbar?.SetStepCount(Steps.Count);
+        return step;
+    }
+
+    private void ApplyFocusedInputTarget(RecordedStep step)
+    {
+        if (!string.IsNullOrWhiteSpace(step.InputTargetName) || step.IsSensitiveInput)
+        {
+            return;
+        }
+
+        try
+        {
+            var focused = _uiAutomationService.GetFocusedElement();
+            if (focused.IsEditable || focused.IsPassword)
+            {
+                step.InputTargetName = focused.UsefulElementFound ? focused.Name : null;
+                step.InputTargetControlType = focused.ControlType;
+                step.IsSensitiveInput = focused.IsPassword;
+                step.RawElementDebug = AppendDebug(step.RawElementDebug, "Focused element:", focused.RawElementDebug);
+                step.ParentChainDebug = AppendDebug(step.ParentChainDebug, "Focused parent chain:", focused.ParentChainDebug);
+            }
+        }
+        catch (Exception ex)
+        {
+            step.CaptureError = AppendError(step.CaptureError, $"Focused UI Automation failed: {ex.Message}");
+        }
+    }
+
+    private RecordedStep CreateKeyboardActionStep(StepActionType actionType, string? specialKeyName, string? shortcutName)
+    {
+        var previous = Steps.LastOrDefault();
+        var step = new RecordedStep
+        {
+            Index = Steps.Count + 1,
+            ActionType = actionType,
+            KeyboardInputDetected = true,
+            KeyCount = actionType == StepActionType.TextEntry ? 0 : 1,
+            SpecialKeyName = specialKeyName,
+            ShortcutName = shortcutName,
+            TypedCharactersStored = false,
+            ScreenshotPath = previous?.ScreenshotPath,
+            ScreenshotCaptured = previous?.ScreenshotCaptured == true,
+            VirtualScreenBounds = GetVirtualScreenBounds(),
+            ProcessDpiAwareness = _dpiAwarenessService.GetCurrentThreadAwareness(),
+            WindowTitle = previous?.WindowTitle,
+            ProcessName = previous?.ProcessName,
+            ExecutablePath = previous?.ExecutablePath,
+            WindowBounds = previous?.WindowBounds,
+            InputTargetName = previous?.InputTargetName,
+            InputTargetControlType = previous?.InputTargetControlType,
+            IsSensitiveInput = previous?.IsSensitiveInput == true
+        };
+
+        if (actionType == StepActionType.TextEntry)
+        {
+            ApplyFocusedInputTarget(step);
+        }
+
+        try
+        {
+            var activeWindow = _activeWindowService.Capture();
+            step.ActiveWindowHandle = activeWindow.Handle;
+            step.WindowTitle = activeWindow.Title ?? step.WindowTitle;
+            step.ProcessName = activeWindow.ProcessName ?? step.ProcessName;
+            step.ExecutablePath = activeWindow.ExecutablePath ?? step.ExecutablePath;
+            step.WindowBounds = activeWindow.Bounds ?? step.WindowBounds;
+        }
+        catch (Exception ex)
+        {
+            step.CaptureError = AppendError(step.CaptureError, $"Window metadata failed: {ex.Message}");
+        }
+
+        var title = _titleGenerator.GenerateWithReason(step);
+        step.GeneratedTitle = title.Title;
+        step.GeneratedTitleReason = title.Reason;
+        step.UserTitle = step.GeneratedTitle;
+        return step;
+    }
+
+    private void FinalizePendingTyping()
+    {
+        _typingTimer.Stop();
+        _pendingTypingStep = null;
+        _pendingTypingKeyCount = 0;
+        StepsList.Items.Refresh();
+    }
+
     private async Task StopRecordingAsync()
     {
         _isRecording = false;
         _isPaused = false;
-        StopHook();
+        FinalizePendingTyping();
+        StopHooks();
         CleanupRecordingUi();
 
         WindowState = WindowState.Normal;
@@ -325,7 +497,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async void MainWindow_Closing(object? sender, CancelEventArgs e)
     {
-        StopHook();
+        StopHooks();
         CleanupRecordingUi();
         if (Steps.Count > 0)
         {
@@ -366,7 +538,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void LoadSession(RecordingSession session)
     {
-        StopHook();
+        StopHooks();
         CleanupRecordingUi();
         _isRecording = false;
         _isPaused = false;
@@ -437,21 +609,32 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
-    private void StopHook()
+    private void StopHooks()
     {
-        if (_mouseHook is null)
-        {
-            return;
-        }
-
         try
         {
-            _mouseHook.ClickCaptured -= MouseHook_ClickCaptured;
-            _mouseHook.Dispose();
+            if (_mouseHook is not null)
+            {
+                _mouseHook.ClickCaptured -= MouseHook_ClickCaptured;
+                _mouseHook.Dispose();
+            }
         }
         finally
         {
             _mouseHook = null;
+        }
+
+        try
+        {
+            if (_keyboardHook is not null)
+            {
+                _keyboardHook.KeyboardInputCaptured -= KeyboardHook_KeyboardInputCaptured;
+                _keyboardHook.Dispose();
+            }
+        }
+        finally
+        {
+            _keyboardHook = null;
         }
     }
 
@@ -478,6 +661,30 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         return point.X >= 0 && point.Y >= 0 && point.X <= ActualWidth && point.Y <= ActualHeight;
     }
 
+    private bool ShouldIgnoreKeyboard()
+    {
+        var foreground = NativeMethodsForApp.GetForegroundWindow();
+        if (foreground == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        var mainHandle = new WindowInteropHelper(this).Handle;
+        if (foreground == mainHandle)
+        {
+            return true;
+        }
+
+        return _toolbar?.IsForegroundWindow(foreground) == true;
+    }
+
+    private static bool IsEditableClickTarget(RecordedStep step)
+    {
+        return step.IsSensitiveInput
+            || !string.IsNullOrWhiteSpace(step.InputTargetName)
+            || step.ControlType?.Contains("Edit", StringComparison.OrdinalIgnoreCase) == true;
+    }
+
     private static ScreenBounds GetVirtualScreenBounds()
     {
         var bounds = WinForms.SystemInformation.VirtualScreen;
@@ -496,5 +703,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private static string AppendError(string? existing, string next)
     {
         return string.IsNullOrWhiteSpace(existing) ? next : $"{existing}; {next}";
+    }
+
+    private static string AppendDebug(string? existing, string label, string next)
+    {
+        if (string.IsNullOrWhiteSpace(next))
+        {
+            return existing ?? string.Empty;
+        }
+
+        var block = $"{label}{Environment.NewLine}{next}";
+        return string.IsNullOrWhiteSpace(existing) ? block : $"{existing}{Environment.NewLine}{Environment.NewLine}{block}";
     }
 }

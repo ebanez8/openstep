@@ -11,6 +11,42 @@ public sealed class StepTitleGenerator
 
     public StepTitleResult GenerateWithReason(RecordedStep step)
     {
+        if (step.ActionType == StepActionType.Shortcut && !string.IsNullOrWhiteSpace(step.ShortcutName))
+        {
+            return new StepTitleResult($"Press {step.ShortcutName}", "keyboard shortcut");
+        }
+
+        if (step.ActionType == StepActionType.SpecialKey && !string.IsNullOrWhiteSpace(step.SpecialKeyName))
+        {
+            return new StepTitleResult($"Press {step.SpecialKeyName}", "special key");
+        }
+
+        if (step.ActionType == StepActionType.TextEntry)
+        {
+            if (step.IsSensitiveInput)
+            {
+                return new StepTitleResult("Enter hidden text", "sensitive text entry");
+            }
+
+            var target = Clean(step.InputTargetName);
+            if (!string.IsNullOrWhiteSpace(target))
+            {
+                return new StepTitleResult($"Type into \"{target}\"", "named text input target");
+            }
+
+            if (!string.IsNullOrWhiteSpace(step.WindowTitle))
+            {
+                return new StepTitleResult($"Enter text in {step.WindowTitle}", "text entry window title fallback");
+            }
+
+            if (!string.IsNullOrWhiteSpace(step.ProcessName))
+            {
+                return new StepTitleResult($"Enter text in {step.ProcessName}", "text entry process name fallback");
+            }
+
+            return new StepTitleResult("Enter text", "text entry fallback");
+        }
+
         var name = Clean(step.ElementName);
         var controlType = Clean(step.ControlType);
 

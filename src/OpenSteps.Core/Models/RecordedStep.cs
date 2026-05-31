@@ -10,6 +10,8 @@ public sealed class RecordedStep
 
     public DateTimeOffset Timestamp { get; init; } = DateTimeOffset.Now;
 
+    public StepActionType ActionType { get; set; } = StepActionType.Click;
+
     public string? ScreenshotPath { get; set; }
 
     public int ClickX { get; set; }
@@ -69,6 +71,22 @@ public sealed class RecordedStep
 
     public string? ProcessDpiAwareness { get; set; }
 
+    public bool KeyboardInputDetected { get; set; }
+
+    public int? KeyCount { get; set; }
+
+    public string? SpecialKeyName { get; set; }
+
+    public string? ShortcutName { get; set; }
+
+    public bool IsSensitiveInput { get; set; }
+
+    public string? InputTargetName { get; set; }
+
+    public string? InputTargetControlType { get; set; }
+
+    public bool TypedCharactersStored { get; set; }
+
     public string DisplayTitle => string.IsNullOrWhiteSpace(UserTitle) ? GeneratedTitle : UserTitle!;
 
     public string MetadataSummary
@@ -78,6 +96,15 @@ public sealed class RecordedStep
             var lines = new List<string>
             {
                 $"Click: ({ClickX}, {ClickY})",
+                $"Action type: {ActionType}",
+                $"Keyboard input detected: {(KeyboardInputDetected ? "yes" : "no")}",
+                $"Key count: {(KeyCount.HasValue ? KeyCount.Value.ToString() : "(not stored)")}",
+                $"Special key: {SpecialKeyName ?? "(none)"}",
+                $"Shortcut: {ShortcutName ?? "(none)"}",
+                $"Input target: {InputTargetName ?? "(unknown)"}",
+                $"Input target control: {InputTargetControlType ?? "(unknown)"}",
+                $"Sensitive input: {(IsSensitiveInput ? "yes" : "no")}",
+                $"Typed characters stored: {(TypedCharactersStored ? "yes" : "no")}",
                 $"Virtual screen: {FormatBounds(VirtualScreenBounds)}",
                 $"Active window bounds: {FormatBounds(WindowBounds)}",
                 $"Click inside active window: {FormatBool(ClickInsideActiveWindowBounds)}",

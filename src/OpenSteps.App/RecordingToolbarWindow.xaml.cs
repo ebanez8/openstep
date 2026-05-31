@@ -54,6 +54,12 @@ public partial class RecordingToolbarWindow : Window
         return point.X >= 0 && point.Y >= 0 && point.X <= ActualWidth && point.Y <= ActualHeight;
     }
 
+    public bool IsForegroundWindow(IntPtr foregroundWindow)
+    {
+        return foregroundWindow != IntPtr.Zero
+            && foregroundWindow == new System.Windows.Interop.WindowInteropHelper(this).Handle;
+    }
+
     private void PauseButton_Click(object sender, RoutedEventArgs e)
     {
         IsPaused = !IsPaused;

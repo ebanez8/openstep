@@ -48,7 +48,48 @@ public sealed class UiAutomationService
                 quality == UiAutomationQuality.UsefulElementFound,
                 FormatElement(rawElement),
                 FormatParentChain(parentChain),
-                FormatCandidates(candidates, x, y));
+                FormatCandidates(candidates, x, y),
+                IsEditable(chosen),
+                chosen.IsPassword,
+                chosen.IsKeyboardFocusable);
+        }
+        catch (Exception ex)
+        {
+            return Failed(ex.Message);
+        }
+    }
+
+    public UiElementInfo GetFocusedElement()
+    {
+        try
+        {
+            var element = AutomationElement.FocusedElement;
+            if (element is null)
+            {
+                return Failed("AutomationElement.FocusedElement returned no element.");
+            }
+
+            var focused = Snapshot(element);
+            var parentChain = BuildParentChain(element);
+            var quality = IsUseful(focused)
+                ? UiAutomationQuality.UsefulElementFound
+                : UiAutomationQuality.GenericContainerOnly;
+
+            return new UiElementInfo(
+                focused.Name,
+                focused.AutomationId,
+                focused.ControlType,
+                focused.ClassName,
+                focused.Bounds,
+                parentChain.FirstOrDefault()?.Name,
+                quality,
+                quality == UiAutomationQuality.UsefulElementFound,
+                FormatElement(focused),
+                FormatParentChain(parentChain),
+                "(focused element lookup)",
+                IsEditable(focused),
+                focused.IsPassword,
+                focused.IsKeyboardFocusable);
         }
         catch (Exception ex)
         {
@@ -162,11 +203,16 @@ public sealed class UiAutomationService
                 EmptyToNull(current.ClassName),
                 bounds,
                 clickX.HasValue && clickY.HasValue && Contains(bounds, clickX.Value, clickY.Value),
-                depth);
+                depth,
+                null,
+                SafeBool(() => current.IsPassword),
+                SafeBool(() => current.IsKeyboardFocusable),
+                SafePattern(element, ValuePattern.Pattern),
+                SafePattern(element, TextPattern.Pattern));
         }
         catch (Exception ex)
         {
-            return new ElementSnapshot(null, null, null, null, null, false, depth, ex.Message);
+            return new ElementSnapshot(null, null, null, null, null, false, depth, ex.Message, false, false, false, false);
         }
     }
 
@@ -183,7 +229,10 @@ public sealed class UiAutomationService
             false,
             $"UI Automation failed: {message}",
             string.Empty,
-            string.Empty);
+            string.Empty,
+            false,
+            false,
+            false);
     }
 
     private static bool IsUseful(ElementSnapshot element)
@@ -208,6 +257,13 @@ public sealed class UiAutomationService
             && string.IsNullOrWhiteSpace(element.AutomationId);
 
         return genericClass || genericPane;
+    }
+
+    private static bool IsEditable(ElementSnapshot element)
+    {
+        return IsControlType(element.ControlType, "Edit")
+            || element.SupportsValuePattern
+            || element.SupportsTextPattern;
     }
 
     private static bool IsControlType(string? actual, string expected)
@@ -257,7 +313,7 @@ public sealed class UiAutomationService
     {
         var suffix = clickX.HasValue ? $", contains click: {(element.ContainsClick ? "yes" : "no")}" : string.Empty;
         var error = string.IsNullOrWhiteSpace(element.Error) ? string.Empty : $", error: {element.Error}";
-        return $"depth {element.Depth}: name={element.Name ?? "(empty)"}, control={element.ControlType ?? "(unknown)"}, class={element.ClassName ?? "(none)"}, automationId={element.AutomationId ?? "(none)"}, bounds={FormatBounds(element.Bounds)}{suffix}{error}";
+        return $"depth {element.Depth}: name={element.Name ?? "(empty)"}, control={element.ControlType ?? "(unknown)"}, class={element.ClassName ?? "(none)"}, automationId={element.AutomationId ?? "(none)"}, bounds={FormatBounds(element.Bounds)}, editable={(IsEditable(element) ? "yes" : "no")}, password={(element.IsPassword ? "yes" : "no")}, focusable={(element.IsKeyboardFocusable ? "yes" : "no")}{suffix}{error}";
     }
 
     private static string FormatParentChain(IReadOnlyList<ElementSnapshot> parents)
@@ -309,6 +365,30 @@ public sealed class UiAutomationService
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
+    private static bool SafeBool(Func<bool> getter)
+    {
+        try
+        {
+            return getter();
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool SafePattern(AutomationElement element, AutomationPattern pattern)
+    {
+        try
+        {
+            return element.TryGetCurrentPattern(pattern, out _);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private sealed record ElementSnapshot(
         string? Name,
         string? AutomationId,
@@ -317,5 +397,9 @@ public sealed class UiAutomationService
         ScreenBounds? Bounds,
         bool ContainsClick = false,
         int Depth = 0,
-        string? Error = null);
+        string? Error = null,
+        bool IsPassword = false,
+        bool IsKeyboardFocusable = false,
+        bool SupportsValuePattern = false,
+        bool SupportsTextPattern = false);
 }

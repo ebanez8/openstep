@@ -6,7 +6,7 @@ public sealed class GlobalMouseHook : IDisposable
 {
     private readonly TimeSpan _debounce = TimeSpan.FromMilliseconds(250);
     private readonly Func<int, int, bool> _shouldIgnoreClick;
-    private readonly NativeMethods.LowLevelMouseProc _callback;
+    private readonly NativeMethods.LowLevelHookProc _callback;
     private DateTimeOffset _lastClickAt = DateTimeOffset.MinValue;
     private IntPtr _hookHandle;
 

@@ -71,4 +71,77 @@ public sealed class StepTitleGeneratorTests
 
         Assert.Equal("Click in Notepad", _generator.Generate(step));
     }
+
+    [Fact]
+    public void Generate_CreatesTextEntryTitleForNamedTarget()
+    {
+        var step = new RecordedStep
+        {
+            ActionType = StepActionType.TextEntry,
+            InputTargetName = "Search",
+            KeyboardInputDetected = true,
+            KeyCount = 12
+        };
+
+        Assert.Equal("Type into \"Search\"", _generator.Generate(step));
+    }
+
+    [Fact]
+    public void Generate_CreatesTextEntryWindowFallback()
+    {
+        var step = new RecordedStep
+        {
+            ActionType = StepActionType.TextEntry,
+            WindowTitle = "config.toml - Notepad",
+            KeyboardInputDetected = true,
+            KeyCount = 30
+        };
+
+        Assert.Equal("Enter text in config.toml - Notepad", _generator.Generate(step));
+    }
+
+    [Fact]
+    public void Generate_CreatesShortcutTitle()
+    {
+        var step = new RecordedStep
+        {
+            ActionType = StepActionType.Shortcut,
+            ShortcutName = "Ctrl+S",
+            KeyboardInputDetected = true,
+            KeyCount = 1
+        };
+
+        Assert.Equal("Press Ctrl+S", _generator.Generate(step));
+    }
+
+    [Fact]
+    public void Generate_CreatesSpecialKeyTitle()
+    {
+        var step = new RecordedStep
+        {
+            ActionType = StepActionType.SpecialKey,
+            SpecialKeyName = "Enter",
+            KeyboardInputDetected = true,
+            KeyCount = 1
+        };
+
+        Assert.Equal("Press Enter", _generator.Generate(step));
+    }
+
+    [Fact]
+    public void Generate_UsesSensitiveTextTitle()
+    {
+        var step = new RecordedStep
+        {
+            ActionType = StepActionType.TextEntry,
+            InputTargetName = "Password",
+            IsSensitiveInput = true,
+            KeyboardInputDetected = true
+        };
+
+        var result = _generator.GenerateWithReason(step);
+
+        Assert.Equal("Enter hidden text", result.Title);
+        Assert.Equal("sensitive text entry", result.Reason);
+    }
 }

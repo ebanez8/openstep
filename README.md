@@ -35,7 +35,7 @@ dotnet run --project src/OpenSteps.App
 
 ## Privacy
 
-OpenSteps records screenshots and click metadata locally. It does not upload anything, does not require an account, and does not include telemetry. The MVP does not record typed text, use AI features, or require internet access. Screenshots may contain sensitive information, so review captured steps before sharing or exporting.
+OpenSteps records screenshots, click metadata, and privacy-safe keyboard activity locally. It does not upload anything, does not require an account, and does not include telemetry. The MVP detects that typing happened but does not record actual typed characters by default. Safe actions such as `Enter`, `Tab`, and shortcuts like `Ctrl+S` may be recorded as documentation steps. Password and secure fields are treated cautiously. Screenshots may contain sensitive information, so review captured steps before sharing or exporting.
 
 ## Roadmap
 

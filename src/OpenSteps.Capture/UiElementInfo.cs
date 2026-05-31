@@ -13,4 +13,7 @@ public sealed record UiElementInfo(
     bool UsefulElementFound,
     string RawElementDebug,
     string ParentChainDebug,
-    string CandidateElementsDebug);
+    string CandidateElementsDebug,
+    bool IsEditable,
+    bool IsPassword,
+    bool IsKeyboardFocusable);
