@@ -40,7 +40,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         InitializeComponent();
         DataContext = this;
         _typingTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(850) };
-        _typingTimer.Tick += (_, _) => FinalizePendingTyping();
+        _typingTimer.Tick += async (_, _) => await FinalizePendingTypingAsync();
         ResetSession();
         Closing += MainWindow_Closing;
     }
@@ -226,20 +226,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         if (input.Kind == KeyboardInputKind.Text)
         {
-            await AddTextKeyToPendingStepAsync();
+            AddTextKeyToPendingStep();
             return;
         }
 
-        FinalizePendingTyping();
+        await FinalizePendingTypingAsync();
         var actionType = input.Kind == KeyboardInputKind.Shortcut ? StepActionType.Shortcut : StepActionType.SpecialKey;
         var step = CreateKeyboardActionStep(actionType, input.KeyName, input.ShortcutName);
         Steps.Add(step);
         RenumberSteps();
         _toolbar?.SetStepCount(Steps.Count);
         UpdateSessionSummary();
+        await RefreshKeyboardActionScreenshotAsync(step);
     }
 
-    private async Task AddTextKeyToPendingStepAsync()
+    private void AddTextKeyToPendingStep()
     {
         var isNewTypingRun = _pendingTypingStep is null;
         var step = _pendingTypingStep ?? CreateOrUpdateTextEntryStep();
@@ -253,11 +254,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         step.KeyboardInputDetected = true;
         step.TypedCharactersStored = false;
         step.KeyCount = step.IsSensitiveInput ? null : _pendingTypingKeyCount;
-
-        if (isNewTypingRun)
-        {
-            await RefreshTextEntryScreenshotAsync(step);
-        }
 
         var title = _titleGenerator.GenerateWithReason(step);
         step.GeneratedTitle = title.Title;
@@ -380,7 +376,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         return step;
     }
 
-    private async Task RefreshTextEntryScreenshotAsync(RecordedStep step)
+    private async Task RefreshKeyboardActionScreenshotAsync(RecordedStep step)
+    {
+        await Task.Delay(250);
+        ApplyFocusedInputTarget(step);
+        await RefreshStepScreenshotAsync(step, "key");
+        StepsList.Items.Refresh();
+        UpdateSessionSummary();
+    }
+
+    private async Task RefreshStepScreenshotAsync(RecordedStep step, string suffix)
     {
         if (step.IsSensitiveInput || step.ElementBounds is not { } bounds)
         {
@@ -395,19 +400,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         try
         {
-            step.ScreenshotPath = await _screenshotService.CaptureVirtualDesktopAsync(_session.OutputDirectory, $"step-{step.Index:000}-text.png", x, y);
+            step.ScreenshotPath = await _screenshotService.CaptureVirtualDesktopAsync(_session.OutputDirectory, $"step-{step.Index:000}-{suffix}.png", x, y);
             step.ScreenshotCaptured = true;
         }
         catch (Exception ex)
         {
             step.ScreenshotCaptured = false;
-            step.CaptureError = AppendError(step.CaptureError, $"Text entry screenshot failed: {ex.Message}");
+            step.CaptureError = AppendError(step.CaptureError, $"Keyboard action screenshot failed: {ex.Message}");
         }
     }
 
-    private void FinalizePendingTyping()
+    private async Task FinalizePendingTypingAsync()
     {
         _typingTimer.Stop();
+        if (_pendingTypingStep is { } step)
+        {
+            await RefreshStepScreenshotAsync(step, "text");
+        }
+
         _pendingTypingStep = null;
         _pendingTypingKeyCount = 0;
         StepsList.Items.Refresh();
@@ -417,7 +427,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         _isRecording = false;
         _isPaused = false;
-        FinalizePendingTyping();
+        await FinalizePendingTypingAsync();
         StopHooks();
         CleanupRecordingUi();
 
