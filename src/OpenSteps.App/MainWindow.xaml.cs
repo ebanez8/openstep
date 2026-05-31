@@ -5,6 +5,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using OpenSteps.Capture;
 using OpenSteps.Core.Models;
@@ -125,7 +126,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        Dispatcher.BeginInvoke(() => HandleKeyboardInput(e));
+        Dispatcher.BeginInvoke(async () => await HandleKeyboardInputAsync(e));
     }
 
     private async Task CaptureStepAsync(int x, int y)
@@ -216,7 +217,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
-    private void HandleKeyboardInput(KeyboardInputEventArgs input)
+    private async Task HandleKeyboardInputAsync(KeyboardInputEventArgs input)
     {
         if (!_isRecording || _isPaused || ShouldIgnoreKeyboard())
         {
@@ -225,7 +226,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         if (input.Kind == KeyboardInputKind.Text)
         {
-            AddTextKeyToPendingStep();
+            await AddTextKeyToPendingStepAsync();
             return;
         }
 
@@ -238,14 +239,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         UpdateSessionSummary();
     }
 
-    private void AddTextKeyToPendingStep()
+    private async Task AddTextKeyToPendingStepAsync()
     {
+        var isNewTypingRun = _pendingTypingStep is null;
         var step = _pendingTypingStep ?? CreateOrUpdateTextEntryStep();
         _pendingTypingStep = step;
+        if (isNewTypingRun)
+        {
+            _pendingTypingKeyCount = step.KeyCount ?? 0;
+        }
+
         _pendingTypingKeyCount++;
         step.KeyboardInputDetected = true;
         step.TypedCharactersStored = false;
         step.KeyCount = step.IsSensitiveInput ? null : _pendingTypingKeyCount;
+
+        if (isNewTypingRun)
+        {
+            await RefreshTextEntryScreenshotAsync(step);
+        }
 
         var title = _titleGenerator.GenerateWithReason(step);
         step.GeneratedTitle = title.Title;
@@ -271,6 +283,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return previous;
         }
 
+        if (previous is not null && previous.ActionType == StepActionType.TextEntry)
+        {
+            ApplyFocusedInputTarget(previous);
+            return previous;
+        }
+
         var step = CreateKeyboardActionStep(StepActionType.TextEntry, null, null);
         Steps.Add(step);
         RenumberSteps();
@@ -280,7 +298,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void ApplyFocusedInputTarget(RecordedStep step)
     {
-        if (!string.IsNullOrWhiteSpace(step.InputTargetName) || step.IsSensitiveInput)
+        if (step.IsSensitiveInput)
         {
             return;
         }
@@ -290,9 +308,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             var focused = _uiAutomationService.GetFocusedElement();
             if (focused.IsEditable || focused.IsPassword)
             {
-                step.InputTargetName = focused.UsefulElementFound ? focused.Name : null;
+                step.InputTargetName = focused.UsefulElementFound ? focused.Name : step.InputTargetName;
                 step.InputTargetControlType = focused.ControlType;
                 step.IsSensitiveInput = focused.IsPassword;
+                step.ElementName = focused.Name;
+                step.AutomationId = focused.AutomationId;
+                step.ControlType = focused.ControlType;
+                step.ClassName = focused.ClassName;
+                step.ElementBounds = focused.Bounds;
+                step.UiAutomationSucceeded = focused.Quality != UiAutomationQuality.UiAutomationFailed;
+                step.UiAutomationQuality = focused.Quality;
+                step.UsefulElementFound = focused.UsefulElementFound;
                 step.RawElementDebug = AppendDebug(step.RawElementDebug, "Focused element:", focused.RawElementDebug);
                 step.ParentChainDebug = AppendDebug(step.ParentChainDebug, "Focused parent chain:", focused.ParentChainDebug);
             }
@@ -352,6 +378,31 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         step.GeneratedTitleReason = title.Reason;
         step.UserTitle = step.GeneratedTitle;
         return step;
+    }
+
+    private async Task RefreshTextEntryScreenshotAsync(RecordedStep step)
+    {
+        if (step.IsSensitiveInput || step.ElementBounds is not { } bounds)
+        {
+            return;
+        }
+
+        var x = bounds.X + bounds.Width / 2;
+        var y = bounds.Y + bounds.Height / 2;
+        step.ClickX = x;
+        step.ClickY = y;
+        step.ClickInsideActiveWindowBounds = ContainsBounds(step.WindowBounds, x, y);
+
+        try
+        {
+            step.ScreenshotPath = await _screenshotService.CaptureVirtualDesktopAsync(_session.OutputDirectory, $"step-{step.Index:000}-text.png", x, y);
+            step.ScreenshotCaptured = true;
+        }
+        catch (Exception ex)
+        {
+            step.ScreenshotCaptured = false;
+            step.CaptureError = AppendError(step.CaptureError, $"Text entry screenshot failed: {ex.Message}");
+        }
     }
 
     private void FinalizePendingTyping()
@@ -485,6 +536,45 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             SyncSessionOrder();
             _ = SaveSessionAsync(showMessage: false);
         }
+    }
+
+    private void ViewScreenshot_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not RecordedStep step
+            || string.IsNullOrWhiteSpace(step.ScreenshotPath)
+            || !File.Exists(step.ScreenshotPath))
+        {
+            return;
+        }
+
+        var image = new BitmapImage();
+        image.BeginInit();
+        image.CacheOption = BitmapCacheOption.OnLoad;
+        image.UriSource = new Uri(step.ScreenshotPath, UriKind.Absolute);
+        image.EndInit();
+        image.Freeze();
+
+        var preview = new Window
+        {
+            Title = $"Step {step.Index} Screenshot",
+            Owner = this,
+            Width = Math.Min(1200, SystemParameters.WorkArea.Width * 0.9),
+            Height = Math.Min(800, SystemParameters.WorkArea.Height * 0.9),
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Background = System.Windows.Media.Brushes.Black,
+            Content = new ScrollViewer
+            {
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Content = new System.Windows.Controls.Image
+                {
+                    Source = image,
+                    Stretch = System.Windows.Media.Stretch.None
+                }
+            }
+        };
+
+        preview.ShowDialog();
     }
 
     private void SessionTitleBox_TextChanged(object sender, TextChangedEventArgs e)

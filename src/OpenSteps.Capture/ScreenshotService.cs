@@ -9,13 +9,18 @@ public sealed class ScreenshotService
 {
     public Task<string> CaptureVirtualDesktopAsync(string sessionDirectory, int stepIndex, int clickX, int clickY, CancellationToken cancellationToken = default)
     {
+        return CaptureVirtualDesktopAsync(sessionDirectory, $"step-{stepIndex:000}.png", clickX, clickY, cancellationToken);
+    }
+
+    public Task<string> CaptureVirtualDesktopAsync(string sessionDirectory, string fileName, int clickX, int clickY, CancellationToken cancellationToken = default)
+    {
         return Task.Run(() =>
         {
             cancellationToken.ThrowIfCancellationRequested();
             Directory.CreateDirectory(sessionDirectory);
 
             var bounds = SystemInformation.VirtualScreen;
-            var filePath = Path.Combine(sessionDirectory, $"step-{stepIndex:000}.png");
+            var filePath = Path.Combine(sessionDirectory, fileName);
 
             using var bitmap = new Bitmap(bounds.Width, bounds.Height, PixelFormat.Format32bppArgb);
             using (var graphics = Graphics.FromImage(bitmap))
