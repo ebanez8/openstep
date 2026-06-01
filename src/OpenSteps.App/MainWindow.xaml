@@ -4,143 +4,109 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="OpenSteps" Height="760" Width="1120" MinHeight="620" MinWidth="920"
-        Background="#F5F7FA">
+        Title="OpenSteps" Height="82" Width="560" MinHeight="82" MinWidth="560"
+        WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True"
+        Background="Transparent" Topmost="True">
+    <Window.Resources>
+        <Style x:Key="PillIconButton" TargetType="Button">
+            <Setter Property="Width" Value="54" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="FontSize" Value="17" />
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+            <Setter Property="Foreground" Value="#47545B" />
+            <Setter Property="Background" Value="#EDF6F9" />
+            <Setter Property="BorderBrush" Value="#DDE9EE" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="12"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              RecognizesAccessKey="True" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#E4EEF3" />
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#D4E1E8" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#DCE9EF" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PrimaryPillIconButton" TargetType="Button" BasedOn="{StaticResource PillIconButton}">
+            <Setter Property="Foreground" Value="#33414A" />
+            <Setter Property="Background" Value="#DCE9EF" />
+            <Setter Property="BorderBrush" Value="#C9D9E1" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#D6E5EC" />
+                    <Setter Property="BorderBrush" Value="#C2D4DD" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="GhostPillIconButton" TargetType="Button" BasedOn="{StaticResource PillIconButton}">
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="#63727B" />
+        </Style>
+    </Window.Resources>
+
     <Grid>
-        <Grid x:Name="HomePanel" Margin="40">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
+        <Grid x:Name="HomePanel" Margin="12">
+            <Border Background="#EEF8FB" BorderBrush="#D9E8EE"
+                    BorderThickness="1" CornerRadius="30" Padding="12,8"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Border.Effect>
+                    <DropShadowEffect Color="#8FA7B2" BlurRadius="26" ShadowDepth="5" Opacity="0.34" />
+                </Border.Effect>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="&#xE700;" FontFamily="Segoe MDL2 Assets"
+                            ToolTip="Move" PreviewMouseLeftButtonDown="MoveControl_MouseLeftButtonDown"
+                            Style="{StaticResource GhostPillIconButton}" Cursor="SizeAll" />
+                    <TextBlock Text="OpenSteps" Foreground="#1E2B35" FontWeight="SemiBold"
+                               VerticalAlignment="Center" Margin="6,0,24,0" />
 
-            <StackPanel VerticalAlignment="Center" MaxWidth="720">
-                <TextBlock Text="OpenSteps" FontSize="44" FontWeight="SemiBold" Foreground="#151A24" />
-                <TextBlock Text="Record desktop workflows into step-by-step guides."
-                           Margin="0,10,0,0" FontSize="20" Foreground="#4B5565" />
-                <TextBlock Text="OpenSteps records screenshots and click metadata locally. It does not upload anything. Typed text is not recorded, but screenshots may contain sensitive information; review before sharing."
-                           Margin="0,28,0,0" TextWrapping="Wrap" FontSize="14" Foreground="#5F6B7A" />
-
-                <StackPanel Margin="0,24,0,0" MaxWidth="360">
-                    <TextBlock Text="Screenshot mode" FontWeight="SemiBold" Foreground="#3B4454" />
-                    <ComboBox ItemsSource="{Binding ScreenshotCaptureModes}"
-                              SelectedItem="{Binding ScreenshotCaptureMode, Mode=TwoWay}"
-                              Margin="0,8,0,0" Padding="8,5" />
-                    <TextBlock Text="Monitor containing click is recommended. Full virtual desktop is legacy/debug."
-                               Margin="0,7,0,0" TextWrapping="Wrap" FontSize="12" Foreground="#6B7280" />
+                    <Button x:Name="StartRecordingButton" Content="&#xE768;" FontFamily="Segoe MDL2 Assets"
+                            ToolTip="Start recording" Click="StartRecording_Click"
+                            Style="{StaticResource PrimaryPillIconButton}" />
+                    <Button x:Name="PauseRecordingButton" Content="&#xE769;" FontFamily="Segoe MDL2 Assets"
+                            ToolTip="Pause recording" Click="PauseRecording_Click"
+                            Style="{StaticResource PrimaryPillIconButton}" Margin="10,0,0,0"
+                            Visibility="Collapsed" />
+                    <Button x:Name="StopRecordingButton" Content="&#xE71A;" FontFamily="Segoe MDL2 Assets"
+                            ToolTip="Stop recording" Click="StopRecording_Click"
+                            Style="{StaticResource PrimaryPillIconButton}" Margin="10,0,0,0"
+                            Visibility="Collapsed" />
+                    <Button Content="&#xE722;" FontFamily="Segoe MDL2 Assets"
+                            ToolTip="Capture test step" Click="CaptureTestStep_Click"
+                            Style="{StaticResource PillIconButton}" Margin="10,0,0,0" />
+                    <Button Content="&#xE8B7;" FontFamily="Segoe MDL2 Assets"
+                            ToolTip="Open previous session" Click="OpenPreviousSession_Click"
+                            Style="{StaticResource PillIconButton}" Margin="10,0,0,0" />
+                    <TextBlock x:Name="RecordingStatusText" Foreground="#52636B"
+                               VerticalAlignment="Center" Margin="16,0,14,0" />
+                    <Button Content="&#xE711;" FontFamily="Segoe MDL2 Assets"
+                            ToolTip="Close" Click="Close_Click"
+                            Style="{StaticResource GhostPillIconButton}" />
                 </StackPanel>
-
-                <StackPanel Orientation="Horizontal" Margin="0,34,0,0">
-                    <Button Content="Start Recording" Click="StartRecording_Click"
-                            Padding="24,12" FontSize="16" FontWeight="SemiBold" />
-                    <Button Content="Capture Test Step" Click="CaptureTestStep_Click"
-                            Margin="14,0,0,0" Padding="18,12" FontSize="16" />
-                    <Button Content="Open Previous Session" Click="OpenPreviousSession_Click"
-                            Margin="14,0,0,0" Padding="18,12" FontSize="16" />
-                </StackPanel>
-            </StackPanel>
-
-            <TextBlock Grid.Row="1"
-                       Text="MVP: global click capture, screenshots, editable steps, and Markdown export."
-                       Foreground="#6B7280" />
-        </Grid>
-
-        <Grid x:Name="EditorPanel" Visibility="Collapsed">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-
-            <Border Background="White" BorderBrush="#D9DEE8" BorderThickness="0,0,0,1" Padding="28,20">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <TextBox x:Name="SessionTitleBox"
-                                 FontSize="26" FontWeight="SemiBold"
-                                 BorderThickness="0" Background="Transparent"
-                                 TextChanged="SessionTitleBox_TextChanged" />
-                        <TextBlock x:Name="SessionSummaryText" Margin="2,6,0,0" Foreground="#5F6B7A" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Content="Record More" Click="StartRecording_Click" Padding="14,9" />
-                        <Button Content="Save Session" Click="SaveSession_Click"
-                                Margin="10,0,0,0" Padding="14,9" />
-                        <Button Content="Export Markdown" Click="ExportMarkdown_Click"
-                                Margin="10,0,0,0" Padding="16,9" FontWeight="SemiBold" />
-                    </StackPanel>
-                </Grid>
             </Border>
-
-            <ScrollViewer Grid.Row="1" Padding="28" VerticalScrollBarVisibility="Auto">
-                <ItemsControl x:Name="StepsList" ItemsSource="{Binding Steps}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Background="White" BorderBrush="#D9DEE8" BorderThickness="1"
-                                    CornerRadius="6" Margin="0,0,0,18" Padding="18">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="300" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <Border Width="280" Height="170" Background="#EEF2F7"
-                                            BorderBrush="#CBD5E1" BorderThickness="1">
-                                        <Grid>
-                                            <Image Source="{Binding EffectiveScreenshotPath}" Stretch="Uniform" />
-                                            <TextBlock Text="Redacted"
-                                                       HorizontalAlignment="Left" VerticalAlignment="Top"
-                                                       Margin="8" Padding="7,3" Background="#111827"
-                                                       Foreground="White" FontSize="11" FontWeight="SemiBold">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Visibility" Value="Collapsed" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding HasRedactions}" Value="True">
-                                                                <Setter Property="Visibility" Value="Visible" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                            <Button Content="View" Click="ViewScreenshot_Click"
-                                                    HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                                    Margin="0,0,8,8" Padding="8,4" />
-                                        </Grid>
-                                    </Border>
-
-                                    <StackPanel Grid.Column="1" Margin="18,0,0,0">
-                                        <DockPanel LastChildFill="True">
-                                            <TextBlock DockPanel.Dock="Left"
-                                                       Text="{Binding Index, StringFormat=Step {0}}"
-                                                       FontWeight="SemiBold" Foreground="#3B4454"
-                                                       Margin="0,0,14,0" />
-                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                                <Button Content="Edit screenshot" Click="EditScreenshot_Click" Margin="0,0,6,0" Padding="8,4" />
-                                                <Button Content="Up" Click="MoveStepUp_Click" Margin="0,0,6,0" Padding="8,4" />
-                                                <Button Content="Down" Click="MoveStepDown_Click" Margin="0,0,6,0" Padding="8,4" />
-                                                <Button Content="Delete" Click="DeleteStep_Click" Padding="8,4" />
-                                            </StackPanel>
-                                        </DockPanel>
-
-                                        <TextBox Text="{Binding UserTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                 Margin="0,12,0,0" FontSize="18" FontWeight="SemiBold" />
-                                        <TextBox Text="{Binding UserDescription, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                 Margin="0,10,0,0" MinHeight="72" TextWrapping="Wrap"
-                                                 AcceptsReturn="True" VerticalScrollBarVisibility="Auto" />
-
-                                        <Expander Header="Capture debug/status" Margin="0,10,0,0">
-                                            <TextBlock Text="{Binding MetadataSummary}" TextWrapping="Wrap"
-                                                       FontFamily="Consolas" FontSize="12" Foreground="#4B5565" />
-                                        </Expander>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
         </Grid>
     </Grid>
 </Window>
