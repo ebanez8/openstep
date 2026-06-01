@@ -12,7 +12,9 @@ public sealed class SessionStoreTests
         var source = Path.Combine(root, "source");
         Directory.CreateDirectory(source);
         var image = Path.Combine(source, "capture.png");
+        var editedImage = Path.Combine(source, "capture-redacted.png");
         await File.WriteAllBytesAsync(image, [4, 5, 6]);
+        await File.WriteAllBytesAsync(editedImage, [7, 8, 9]);
 
         var session = new RecordingSession { Title = "Saved Session" };
         session.Steps.Add(new RecordedStep
@@ -22,7 +24,9 @@ public sealed class SessionStoreTests
             GeneratedTitle = "Generated",
             UserTitle = "Edited title",
             UserDescription = "Edited description",
-            ScreenshotCaptured = true
+            ScreenshotCaptured = true,
+            EditedScreenshotPath = editedImage,
+            Redactions = [new RedactionRegion(1, 2, 3, 4, RedactionMode.Pixelate)]
         });
 
         var store = new SessionStore(root);
@@ -36,5 +40,7 @@ public sealed class SessionStoreTests
         Assert.Equal("Edited title", loaded.Steps[0].UserTitle);
         Assert.Equal("Edited description", loaded.Steps[0].UserDescription);
         Assert.True(File.Exists(loaded.Steps[0].ScreenshotPath));
+        Assert.True(File.Exists(loaded.Steps[0].EditedScreenshotPath));
+        Assert.Single(loaded.Steps[0].Redactions);
     }
 }

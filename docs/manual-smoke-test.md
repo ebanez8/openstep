@@ -24,15 +24,21 @@ Use this checklist before demoing OpenSteps.
 2. Expand **Capture debug/status** for each step.
 3. Verify click coordinates, screenshot path, active window title, process name, UI Automation element name/control type, success flags, and any error text.
 4. Edit a step title and description.
-5. Delete a step.
-6. Move a step up or down.
-7. Click **Save Session**.
-8. Close and reopen the app, then click **Open Previous Session**.
-9. Confirm screenshots and edited text still load.
-10. Click **Export Markdown** and choose an export folder.
-11. Confirm the success message shows the `guide.md` path.
-12. Open the exported folder when prompted.
-13. Open `guide.md` and verify relative image links under `images/` work.
+5. Click **Edit screenshot** on step 1.
+6. Drag a rectangle over visible text.
+7. Click **Save**.
+8. Verify the step preview shows a pixelated redaction and a redacted/edited label.
+9. Verify the original screenshot still exists locally beside the redacted image.
+10. Delete a step.
+11. Move a step up or down.
+12. Click **Save Session**.
+13. Close and reopen the app, then click **Open Previous Session**.
+14. Confirm screenshots, edited text, and redactions still load.
+15. Click **Export Markdown** and choose an export folder.
+16. Confirm the success message shows the `guide.md` path.
+17. Open the exported folder when prompted.
+18. Open `guide.md` and verify relative image links under `images/` work.
+19. Verify exported redacted steps use the redacted image.
 
 ## Multi-Monitor Capture
 

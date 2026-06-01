@@ -14,6 +14,14 @@ public sealed class RecordedStep
 
     public string? ScreenshotPath { get; set; }
 
+    public string? EditedScreenshotPath { get; set; }
+
+    public List<RedactionRegion> Redactions { get; set; } = [];
+
+    public bool HasRedactions => Redactions.Count > 0;
+
+    public string? EffectiveScreenshotPath => string.IsNullOrWhiteSpace(EditedScreenshotPath) ? ScreenshotPath : EditedScreenshotPath;
+
     public int ClickX { get; set; }
 
     public int ClickY { get; set; }
@@ -151,6 +159,8 @@ public sealed class RecordedStep
                 $"Click inside active window: {FormatBool(ClickInsideActiveWindowBounds)}",
                 $"Process DPI awareness: {ProcessDpiAwareness ?? "(unknown)"}",
                 $"Screenshot captured: {(ScreenshotCaptured ? "yes" : "no")}",
+                $"Edited screenshot: {EditedScreenshotPath ?? "(none)"}",
+                $"Redactions: {Redactions.Count}",
                 $"UI Automation status: {UiAutomationQuality}",
                 $"UI Automation returned element: {(UiAutomationSucceeded ? "yes" : "no")}",
                 $"Useful element found: {(UsefulElementFound ? "yes" : "no")}",

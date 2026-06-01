@@ -61,11 +61,12 @@ public sealed class MarkdownExporter
             markdown.AppendLine($"## Step {number}: {title}");
             markdown.AppendLine();
 
-            if (!string.IsNullOrWhiteSpace(step.ScreenshotPath) && File.Exists(step.ScreenshotPath))
+            var screenshotPath = GetExportScreenshotPath(step);
+            if (!string.IsNullOrWhiteSpace(screenshotPath) && File.Exists(screenshotPath))
             {
                 var imageName = $"step-{number:000}.png";
                 var destination = Path.Combine(imageDirectory, imageName);
-                File.Copy(step.ScreenshotPath, destination, overwrite: true);
+                File.Copy(screenshotPath, destination, overwrite: true);
                 markdown.AppendLine($"![Step {number}](images/{imageName})");
                 markdown.AppendLine();
             }
@@ -90,5 +91,15 @@ public sealed class MarkdownExporter
     private static string EscapeHeading(string value)
     {
         return string.IsNullOrWhiteSpace(value) ? "Untitled OpenSteps Guide" : value.Trim();
+    }
+
+    private static string? GetExportScreenshotPath(RecordedStep step)
+    {
+        if (!string.IsNullOrWhiteSpace(step.EditedScreenshotPath) && File.Exists(step.EditedScreenshotPath))
+        {
+            return step.EditedScreenshotPath;
+        }
+
+        return step.ScreenshotPath;
     }
 }

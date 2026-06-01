@@ -44,6 +44,17 @@ public sealed class SessionStore
                 step.ScreenshotPath = destination;
                 step.ScreenshotCaptured = true;
             }
+
+            if (!string.IsNullOrWhiteSpace(step.EditedScreenshotPath) && File.Exists(step.EditedScreenshotPath))
+            {
+                var destination = Path.Combine(imagesDirectory, $"step-{step.Index:000}-redacted.png");
+                if (!Path.GetFullPath(step.EditedScreenshotPath).Equals(Path.GetFullPath(destination), StringComparison.OrdinalIgnoreCase))
+                {
+                    File.Copy(step.EditedScreenshotPath, destination, overwrite: true);
+                }
+
+                step.EditedScreenshotPath = destination;
+            }
         }
 
         var jsonPath = Path.Combine(sessionDirectory, "session.json");

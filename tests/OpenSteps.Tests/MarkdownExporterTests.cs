@@ -90,4 +90,42 @@ public sealed class MarkdownExporterTests
         Assert.Equal([1], await File.ReadAllBytesAsync(Path.Combine(temp, "images", "step-001.png")));
         Assert.Equal([2], await File.ReadAllBytesAsync(Path.Combine(temp, "images", "step-002.png")));
     }
+
+    [Fact]
+    public async Task ExportAsync_UsesEditedScreenshotWhenAvailable()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "OpenSteps.Tests", Guid.NewGuid().ToString("N"));
+        var source = Path.Combine(temp, "source");
+        Directory.CreateDirectory(source);
+
+        var original = Path.Combine(source, "original.png");
+        var edited = Path.Combine(source, "edited.png");
+        await File.WriteAllBytesAsync(original, [1]);
+        await File.WriteAllBytesAsync(edited, [9]);
+
+        var session = new RecordingSession { Title = "Edited Export Test" };
+        session.Steps.Add(new RecordedStep { GeneratedTitle = "Step", ScreenshotPath = original, EditedScreenshotPath = edited });
+
+        await new MarkdownExporter().ExportAsync(session, temp);
+
+        Assert.Equal([9], await File.ReadAllBytesAsync(Path.Combine(temp, "images", "step-001.png")));
+    }
+
+    [Fact]
+    public async Task ExportAsync_FallsBackToOriginalScreenshotWhenEditedMissing()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "OpenSteps.Tests", Guid.NewGuid().ToString("N"));
+        var source = Path.Combine(temp, "source");
+        Directory.CreateDirectory(source);
+
+        var original = Path.Combine(source, "original.png");
+        await File.WriteAllBytesAsync(original, [3]);
+
+        var session = new RecordingSession { Title = "Fallback Export Test" };
+        session.Steps.Add(new RecordedStep { GeneratedTitle = "Step", ScreenshotPath = original, EditedScreenshotPath = Path.Combine(source, "missing.png") });
+
+        await new MarkdownExporter().ExportAsync(session, temp);
+
+        Assert.Equal([3], await File.ReadAllBytesAsync(Path.Combine(temp, "images", "step-001.png")));
+    }
 }

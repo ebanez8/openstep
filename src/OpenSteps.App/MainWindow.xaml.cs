@@ -21,6 +21,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly ScreenshotService _screenshotService;
     private readonly UiAutomationService _uiAutomationService = new();
     private readonly DpiAwarenessService _dpiAwarenessService = new();
+    private readonly ScreenshotRedactionService _redactionService = new();
     private readonly StepTitleGenerator _titleGenerator = new();
     private readonly MarkdownExporter _markdownExporter = new();
     private readonly SessionStore _sessionStore = new();
@@ -293,17 +294,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private RecordedStep CreateOrUpdateTextEntryStep()
     {
         var previous = Steps.LastOrDefault();
-        if (previous is not null && previous.ActionType == StepActionType.Click)
-        {
-            ApplyFocusedInputTarget(previous);
-            previous.ActionType = StepActionType.TextEntry;
-            previous.KeyboardInputDetected = true;
-            previous.TypedCharactersStored = false;
-            previous.InputTargetName = IsEditableClickTarget(previous) && previous.UsefulElementFound ? previous.ElementName : previous.InputTargetName;
-            previous.InputTargetControlType = previous.ControlType;
-            return previous;
-        }
-
         if (previous is not null && previous.ActionType == StepActionType.TextEntry)
         {
             ApplyFocusedInputTarget(previous);
@@ -581,8 +571,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void ViewScreenshot_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is not RecordedStep step
-            || string.IsNullOrWhiteSpace(step.ScreenshotPath)
-            || !File.Exists(step.ScreenshotPath))
+            || string.IsNullOrWhiteSpace(step.EffectiveScreenshotPath)
+            || !File.Exists(step.EffectiveScreenshotPath))
         {
             return;
         }
@@ -590,7 +580,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var image = new BitmapImage();
         image.BeginInit();
         image.CacheOption = BitmapCacheOption.OnLoad;
-        image.UriSource = new Uri(step.ScreenshotPath, UriKind.Absolute);
+        image.UriSource = new Uri(step.EffectiveScreenshotPath, UriKind.Absolute);
         image.EndInit();
         image.Freeze();
 
@@ -615,6 +605,50 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         };
 
         preview.ShowDialog();
+    }
+
+    private async void EditScreenshot_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not RecordedStep step
+            || string.IsNullOrWhiteSpace(step.ScreenshotPath)
+            || !File.Exists(step.ScreenshotPath))
+        {
+            WinForms.MessageBox.Show("No original screenshot is available for this step.", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Information);
+            return;
+        }
+
+        try
+        {
+            var editor = new ScreenshotRedactionWindow(step.EffectiveScreenshotPath ?? step.ScreenshotPath, step.Redactions)
+            {
+                Owner = this,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+
+            if (editor.ShowDialog() != true)
+            {
+                return;
+            }
+
+            var outputPath = GetEditedScreenshotPath(step);
+            step.Redactions = [.. editor.Redactions];
+            if (step.Redactions.Count == 0)
+            {
+                step.EditedScreenshotPath = null;
+            }
+            else
+            {
+                _redactionService.ApplyRedactions(step.ScreenshotPath, outputPath, step.Redactions);
+                step.EditedScreenshotPath = outputPath;
+            }
+
+            StepsList.Items.Refresh();
+            await SaveSessionAsync(showMessage: false);
+        }
+        catch (Exception ex)
+        {
+            WinForms.MessageBox.Show($"Screenshot could not be edited:\n{ex.Message}", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error);
+        }
     }
 
     private void SessionTitleBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -808,13 +842,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         return _toolbar?.IsForegroundWindow(foreground) == true;
     }
 
-    private static bool IsEditableClickTarget(RecordedStep step)
-    {
-        return step.IsSensitiveInput
-            || !string.IsNullOrWhiteSpace(step.InputTargetName)
-            || step.ControlType?.Contains("Edit", StringComparison.OrdinalIgnoreCase) == true;
-    }
-
     private static ScreenBounds GetVirtualScreenBounds()
     {
         var bounds = WinForms.SystemInformation.VirtualScreen;
@@ -833,6 +860,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private static void ApplyScreenshotResult(RecordedStep step, ScreenshotCaptureResult screenshot)
     {
         step.ScreenshotPath = screenshot.FilePath;
+        step.EditedScreenshotPath = null;
+        step.Redactions.Clear();
         step.ScreenshotCaptureMode = screenshot.CaptureMode;
         step.LocalClickX = screenshot.LocalClickX;
         step.LocalClickY = screenshot.LocalClickY;
@@ -849,6 +878,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         step.IsPrimaryMonitor = screenshot.Monitor.IsPrimary;
         step.MonitorDpiX = screenshot.Monitor.DpiX;
         step.MonitorDpiY = screenshot.Monitor.DpiY;
+    }
+
+    private static string GetEditedScreenshotPath(RecordedStep step)
+    {
+        var original = step.ScreenshotPath ?? $"step-{step.Index:000}.png";
+        var directory = Path.GetDirectoryName(original) ?? ".";
+        var name = Path.GetFileNameWithoutExtension(original);
+        return Path.Combine(directory, $"{name}-redacted.png");
     }
 
     private static string AppendError(string? existing, string next)

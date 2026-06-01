@@ -88,7 +88,22 @@
                                     <Border Width="280" Height="170" Background="#EEF2F7"
                                             BorderBrush="#CBD5E1" BorderThickness="1">
                                         <Grid>
-                                            <Image Source="{Binding ScreenshotPath}" Stretch="Uniform" />
+                                            <Image Source="{Binding EffectiveScreenshotPath}" Stretch="Uniform" />
+                                            <TextBlock Text="Redacted"
+                                                       HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                       Margin="8" Padding="7,3" Background="#111827"
+                                                       Foreground="White" FontSize="11" FontWeight="SemiBold">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasRedactions}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                             <Button Content="View" Click="ViewScreenshot_Click"
                                                     HorizontalAlignment="Right" VerticalAlignment="Bottom"
                                                     Margin="0,0,8,8" Padding="8,4" />
@@ -102,6 +117,7 @@
                                                        FontWeight="SemiBold" Foreground="#3B4454"
                                                        Margin="0,0,14,0" />
                                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                <Button Content="Edit screenshot" Click="EditScreenshot_Click" Margin="0,0,6,0" Padding="8,4" />
                                                 <Button Content="Up" Click="MoveStepUp_Click" Margin="0,0,6,0" Padding="8,4" />
                                                 <Button Content="Down" Click="MoveStepDown_Click" Margin="0,0,6,0" Padding="8,4" />
                                                 <Button Content="Delete" Click="DeleteStep_Click" Padding="8,4" />

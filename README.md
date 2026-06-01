@@ -12,6 +12,7 @@ OpenSteps is a modern open-source Steps Recorder for Windows. It records desktop
 - Multi-monitor support that captures only the monitor containing the click by default.
 - UI Automation metadata for useful editable step titles.
 - Screenshot click highlights.
+- Manual screenshot redaction with local pixelated edits before export.
 - Editable step list with delete and move controls.
 - Markdown export with local `images/step-001.png` assets.
 
@@ -39,6 +40,8 @@ dotnet run --project src/OpenSteps.App
 OpenSteps records screenshots, click metadata, and privacy-safe keyboard activity locally. It does not upload anything, does not require an account, and does not include telemetry. The MVP detects that typing happened but does not record actual typed characters by default. Safe actions such as `Enter`, `Tab`, and shortcuts like `Ctrl+S` may be recorded as documentation steps. Password and secure fields are treated cautiously. Screenshots may contain sensitive information, so review captured steps before sharing or exporting.
 
 By default, screenshots are limited to the physical monitor containing the click. Full virtual desktop capture is still available as a legacy/debug mode from the home screen screenshot mode setting.
+
+OpenSteps stores screenshots locally. Screenshots may contain sensitive data. Before exporting or sharing a guide, review each screenshot and use manual redaction to hide private information. OpenSteps does not upload screenshots and does not automatically detect sensitive information.
 
 ## Roadmap
 
