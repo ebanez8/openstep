@@ -1,17 +1,25 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace OpenSteps.App;
 
 public partial class SessionEditorWindow : Window
 {
     private readonly MainWindow _controller;
+    private readonly DispatcherTimer _autosaveTimer;
     private bool _updatingTitle;
 
     public SessionEditorWindow(MainWindow controller)
     {
         _controller = controller;
+        _autosaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
+        _autosaveTimer.Tick += async (_, _) =>
+        {
+            _autosaveTimer.Stop();
+            await _controller.AutosaveSessionFromEditorAsync();
+        };
         InitializeComponent();
         DataContext = controller;
         Closing += SessionEditorWindow_Closing;
@@ -83,11 +91,27 @@ public partial class SessionEditorWindow : Window
         if (!_updatingTitle)
         {
             _controller.SetSessionTitleFromEditor(SessionTitleBox.Text);
+            ScheduleAutosave();
         }
+    }
+
+    private void StepTextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (IsLoaded)
+        {
+            ScheduleAutosave();
+        }
+    }
+
+    private void ScheduleAutosave()
+    {
+        _autosaveTimer.Stop();
+        _autosaveTimer.Start();
     }
 
     private void SessionEditorWindow_Closing(object? sender, CancelEventArgs e)
     {
+        _autosaveTimer.Stop();
         _controller.EditorWindowClosed(this);
     }
 }

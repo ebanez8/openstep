@@ -98,7 +98,7 @@
                             ToolTip="Capture test step" Click="CaptureTestStep_Click"
                             Style="{StaticResource PillIconButton}" Margin="10,0,0,0" />
                     <Button Content="&#xE8B7;" FontFamily="Segoe MDL2 Assets"
-                            ToolTip="Open previous session" Click="OpenPreviousSession_Click"
+                            ToolTip="Saved sessions" Click="OpenPreviousSession_Click"
                             Style="{StaticResource PillIconButton}" Margin="10,0,0,0" />
                     <TextBlock x:Name="RecordingStatusText" Foreground="#52636B"
                                VerticalAlignment="Center" Margin="16,0,14,0" />

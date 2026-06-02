@@ -1,0 +1,63 @@
+<Window x:Class="OpenSteps.App.SessionPickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:OpenSteps.App"
+        Title="Saved OpenSteps Sessions" Width="760" Height="520" MinWidth="620" MinHeight="420"
+        WindowStartupLocation="CenterScreen"
+        Background="#F5F7FA">
+    <Window.Resources>
+        <local:FileImageConverter x:Key="FileImageConverter" />
+    </Window.Resources>
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="White" BorderBrush="#D9DEE8" BorderThickness="0,0,0,1" Padding="18">
+            <DockPanel>
+                <TextBlock Text="Saved Sessions" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="Open Sessions Folder" Click="OpenFolder_Click" Padding="12,7" Margin="0,0,8,0" />
+                    <Button Content="Refresh" Click="Refresh_Click" Padding="12,7" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid Margin="18">
+            <TextBlock x:Name="EmptyText" Text="No saved sessions yet." Foreground="#5F6B7A"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
+            <ListBox x:Name="SessionsList" ItemsSource="{Binding Sessions}" BorderThickness="0" Background="Transparent">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="White" BorderBrush="#D9DEE8" BorderThickness="1" CornerRadius="6"
+                                Padding="12" Margin="0,0,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="96" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <Border Width="82" Height="58" Background="#EEF2F7" BorderBrush="#CBD5E1" BorderThickness="1">
+                                    <Image Source="{Binding ThumbnailPath, Converter={StaticResource FileImageConverter}}" Stretch="UniformToFill" />
+                                </Border>
+
+                                <StackPanel Grid.Column="1" Margin="10,0,14,0">
+                                    <TextBox Text="{Binding Title, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             FontSize="16" FontWeight="SemiBold" BorderBrush="#D9DEE8" Padding="6,4" />
+                                    <TextBlock Foreground="#5F6B7A" Margin="2,6,0,0">
+                                        <Run Text="{Binding StepCount}" />
+                                        <Run Text=" steps  Updated " />
+                                        <Run Text="{Binding UpdatedAt, StringFormat={}{0:g}}" />
+                                    </TextBlock>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button Content="Open" Click="Open_Click" Padding="10,6" Margin="0,0,6,0" />
+                                    <Button Content="Rename" Click="Rename_Click" Padding="10,6" Margin="0,0,6,0" />
+                                    <Button Content="Delete" Click="Delete_Click" Padding="10,6" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+    </DockPanel>
+</Window>

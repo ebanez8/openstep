@@ -1,9 +1,13 @@
 <Window x:Class="OpenSteps.App.SessionEditorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:OpenSteps.App"
         Title="OpenSteps" Width="1120" Height="760" MinWidth="920" MinHeight="620"
         WindowStartupLocation="CenterScreen"
         Background="#F5F7FA">
+    <Window.Resources>
+        <local:FileImageConverter x:Key="FileImageConverter" />
+    </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -48,7 +52,7 @@
                                 <Border Width="280" Height="170" Background="#EEF2F7"
                                         BorderBrush="#CBD5E1" BorderThickness="1">
                                     <Grid>
-                                        <Image Source="{Binding EffectiveScreenshotPath}" Stretch="Uniform" />
+                                        <Image Source="{Binding EffectiveScreenshotPath, Converter={StaticResource FileImageConverter}}" Stretch="Uniform" />
                                         <TextBlock Text="Redacted"
                                                    HorizontalAlignment="Left" VerticalAlignment="Top"
                                                    Margin="8" Padding="7,3" Background="#111827"
@@ -85,8 +89,10 @@
                                     </DockPanel>
 
                                     <TextBox Text="{Binding UserTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             TextChanged="StepTextChanged"
                                              Margin="0,12,0,0" FontSize="18" FontWeight="SemiBold" />
                                     <TextBox Text="{Binding UserDescription, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             TextChanged="StepTextChanged"
                                              Margin="0,10,0,0" MinHeight="72" TextWrapping="Wrap"
                                              AcceptsReturn="True" VerticalScrollBarVisibility="Auto" />
 

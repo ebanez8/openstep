@@ -45,6 +45,15 @@ public sealed class ScreenshotRedactionService
                 {
                     Pixelate(redacted, region);
                 }
+                else if (region.Mode == RedactionMode.RedCircle)
+                {
+                    var rectangle = Clamp(region, source.Width, source.Height);
+                    if (rectangle.Width > 0 && rectangle.Height > 0)
+                    {
+                        using var pen = new Pen(Color.Red, Math.Max(4, Math.Min(rectangle.Width, rectangle.Height) / 12f));
+                        graphics.DrawEllipse(pen, rectangle);
+                    }
+                }
             }
         }
 

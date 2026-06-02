@@ -11,6 +11,7 @@ using WpfBrush = System.Windows.Media.Brush;
 using WpfBrushes = System.Windows.Media.Brushes;
 using WpfMouseEventArgs = System.Windows.Input.MouseEventArgs;
 using WpfPoint = System.Windows.Point;
+using WpfEllipse = System.Windows.Shapes.Ellipse;
 using WpfRectangle = System.Windows.Shapes.Rectangle;
 
 namespace OpenSteps.App;
@@ -22,7 +23,8 @@ public partial class ScreenshotRedactionWindow : Window
     private readonly int _imageWidth;
     private readonly int _imageHeight;
     private WpfPoint? _dragStart;
-    private WpfRectangle? _previewRectangle;
+    private Shape? _previewShape;
+    private RedactionMode _selectedMode = RedactionMode.Pixelate;
 
     public ScreenshotRedactionWindow(string screenshotPath, IReadOnlyList<RedactionRegion> redactions)
     {
@@ -48,20 +50,20 @@ public partial class ScreenshotRedactionWindow : Window
         }
 
         _dragStart = e.GetPosition(OverlayCanvas);
-        _previewRectangle = CreateOverlayRectangle(WpfBrushes.Transparent, WpfBrushes.White, 2);
-        OverlayCanvas.Children.Add(_previewRectangle);
+        _previewShape = CreatePreviewShape();
+        OverlayCanvas.Children.Add(_previewShape);
         OverlayCanvas.CaptureMouse();
     }
 
     private void OverlayCanvas_MouseMove(object sender, WpfMouseEventArgs e)
     {
-        if (_dragStart is not { } start || _previewRectangle is null)
+        if (_dragStart is not { } start || _previewShape is null)
         {
             return;
         }
 
         var current = e.GetPosition(OverlayCanvas);
-        PositionRectangle(_previewRectangle, start, current);
+        PositionShape(_previewShape, start, current);
     }
 
     private void OverlayCanvas_MouseUp(object sender, MouseButtonEventArgs e)
@@ -81,7 +83,7 @@ public partial class ScreenshotRedactionWindow : Window
             OverlayCanvas.ActualHeight,
             _imageWidth,
             _imageHeight,
-            RedactionMode.Pixelate);
+            _selectedMode);
 
         if (region is not null)
         {
@@ -89,10 +91,10 @@ public partial class ScreenshotRedactionWindow : Window
         }
 
         _dragStart = null;
-        if (_previewRectangle is not null)
+        if (_previewShape is not null)
         {
-            OverlayCanvas.Children.Remove(_previewRectangle);
-            _previewRectangle = null;
+            OverlayCanvas.Children.Remove(_previewShape);
+            _previewShape = null;
         }
 
         OverlayCanvas.ReleaseMouseCapture();
@@ -148,7 +150,7 @@ public partial class ScreenshotRedactionWindow : Window
                 Canvas.SetTop(pixelated, display.Y);
                 OverlayCanvas.Children.Add(pixelated);
             }
-            else
+            else if (region.Mode == RedactionMode.BlackBox)
             {
                 var rectangle = CreateOverlayRectangle(WpfBrushes.Black, WpfBrushes.White, 1);
                 Canvas.SetLeft(rectangle, display.X);
@@ -157,7 +159,26 @@ public partial class ScreenshotRedactionWindow : Window
                 rectangle.Height = display.Height;
                 OverlayCanvas.Children.Add(rectangle);
             }
+            else if (region.Mode == RedactionMode.RedCircle)
+            {
+                var ellipse = CreateRedCircle(display);
+                OverlayCanvas.Children.Add(ellipse);
+            }
         }
+    }
+
+    private void PixelateTool_Click(object sender, RoutedEventArgs e)
+    {
+        _selectedMode = RedactionMode.Pixelate;
+        PixelateToolButton.FontWeight = FontWeights.SemiBold;
+        RedCircleToolButton.FontWeight = FontWeights.Normal;
+    }
+
+    private void RedCircleTool_Click(object sender, RoutedEventArgs e)
+    {
+        _selectedMode = RedactionMode.RedCircle;
+        PixelateToolButton.FontWeight = FontWeights.Normal;
+        RedCircleToolButton.FontWeight = FontWeights.SemiBold;
     }
 
     private BitmapSource CreatePixelatedRegionSource(RedactionRegion region)
@@ -265,14 +286,43 @@ public partial class ScreenshotRedactionWindow : Window
         };
     }
 
-    private static void PositionRectangle(WpfRectangle rectangle, WpfPoint start, WpfPoint end)
+    private Shape CreatePreviewShape()
+    {
+        return _selectedMode == RedactionMode.RedCircle
+            ? new WpfEllipse
+            {
+                Fill = WpfBrushes.Transparent,
+                Stroke = WpfBrushes.Red,
+                StrokeThickness = 4,
+                Opacity = 0.9
+            }
+            : CreateOverlayRectangle(WpfBrushes.Transparent, WpfBrushes.White, 2);
+    }
+
+    private static WpfEllipse CreateRedCircle(Rect display)
+    {
+        var ellipse = new WpfEllipse
+        {
+            Fill = WpfBrushes.Transparent,
+            Stroke = WpfBrushes.Red,
+            StrokeThickness = Math.Max(3, Math.Min(display.Width, display.Height) / 18),
+            Width = display.Width,
+            Height = display.Height,
+            Opacity = 0.95
+        };
+        Canvas.SetLeft(ellipse, display.X);
+        Canvas.SetTop(ellipse, display.Y);
+        return ellipse;
+    }
+
+    private static void PositionShape(Shape shape, WpfPoint start, WpfPoint end)
     {
         var left = Math.Min(start.X, end.X);
         var top = Math.Min(start.Y, end.Y);
-        Canvas.SetLeft(rectangle, left);
-        Canvas.SetTop(rectangle, top);
-        rectangle.Width = Math.Abs(end.X - start.X);
-        rectangle.Height = Math.Abs(end.Y - start.Y);
+        Canvas.SetLeft(shape, left);
+        Canvas.SetTop(shape, top);
+        shape.Width = Math.Abs(end.X - start.X);
+        shape.Height = Math.Abs(end.Y - start.Y);
     }
 
     private static BitmapSource LoadImage(string path)

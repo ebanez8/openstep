@@ -82,6 +82,33 @@ public sealed class ScreenshotRedactionServiceTests
         Assert.Equal(beforePixel, after.GetPixel(35, 35).ToArgb());
     }
 
+    [Fact]
+    public void ApplyRedactions_RedCircleDrawsRedPixels()
+    {
+        var temp = CreateTempDirectory();
+        var original = Path.Combine(temp, "original.png");
+        var output = Path.Combine(temp, "redacted.png");
+        CreateGradientImage(original);
+
+        new ScreenshotRedactionService().ApplyRedactions(original, output, [new RedactionRegion(4, 4, 30, 30, RedactionMode.RedCircle)]);
+
+        using var after = new Bitmap(output);
+        var redPixels = 0;
+        for (var y = 0; y < after.Height; y++)
+        {
+            for (var x = 0; x < after.Width; x++)
+            {
+                var pixel = after.GetPixel(x, y);
+                if (pixel.R > 200 && pixel.G < 80 && pixel.B < 80)
+                {
+                    redPixels++;
+                }
+            }
+        }
+
+        Assert.True(redPixels > 0);
+    }
+
     private static string CreateTempDirectory()
     {
         var path = Path.Combine(Path.GetTempPath(), "OpenSteps.Tests", Guid.NewGuid().ToString("N"));

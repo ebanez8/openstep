@@ -11,8 +11,13 @@
 
         <Border Background="White" BorderBrush="#D9DEE8" BorderThickness="0,0,0,1" Padding="14">
             <DockPanel LastChildFill="False">
-                <TextBlock DockPanel.Dock="Left" Text="Pixelate" FontWeight="SemiBold"
-                           VerticalAlignment="Center" Margin="0,0,18,0" />
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Tool" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0" />
+                    <Button x:Name="PixelateToolButton" Content="Pixelate" Click="PixelateTool_Click"
+                            Padding="12,6" Margin="0,0,8,0" FontWeight="SemiBold" />
+                    <Button x:Name="RedCircleToolButton" Content="Red Circle" Click="RedCircleTool_Click"
+                            Padding="12,6" Margin="0,0,18,0" />
+                </StackPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <Button Content="Undo" Click="Undo_Click" Padding="12,6" Margin="0,0,8,0" />
                     <Button Content="Clear All" Click="ClearAll_Click" Padding="12,6" Margin="0,0,8,0" />

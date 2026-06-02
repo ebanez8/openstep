@@ -12,15 +12,33 @@ public sealed class RecordedStep
 
     public StepActionType ActionType { get; set; } = StepActionType.Click;
 
+    public string? ScreenshotRelativePath { get; set; }
+
+    public string? EditedScreenshotRelativePath { get; set; }
+
+    [JsonIgnore]
     public string? ScreenshotPath { get; set; }
 
+    [JsonIgnore]
     public string? EditedScreenshotPath { get; set; }
 
     public List<RedactionRegion> Redactions { get; set; } = [];
 
     public bool HasRedactions => Redactions.Count > 0;
 
-    public string? EffectiveScreenshotPath => string.IsNullOrWhiteSpace(EditedScreenshotPath) ? ScreenshotPath : EditedScreenshotPath;
+    [JsonIgnore]
+    public string? EffectiveScreenshotPath
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(EditedScreenshotPath) && File.Exists(EditedScreenshotPath))
+            {
+                return EditedScreenshotPath;
+            }
+
+            return ScreenshotPath;
+        }
+    }
 
     public int ClickX { get; set; }
 

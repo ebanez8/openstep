@@ -34,6 +34,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private GlobalKeyboardHook? _keyboardHook;
     private RecordedStep? _pendingTypingStep;
     private SessionEditorWindow? _editorWindow;
+    private SessionPickerWindow? _sessionPickerWindow;
     private int _pendingTypingKeyCount;
     private bool _isRecording;
     private bool _isPaused;
@@ -45,6 +46,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _screenshotService = new ScreenshotService(_monitorService);
         InitializeComponent();
         DataContext = this;
+        Loaded += (_, _) => PositionControllerBottomCenter();
         _typingTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(850) };
         _typingTimer.Tick += async (_, _) => await FinalizePendingTypingAsync();
         _recordingStatusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
@@ -78,6 +80,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ScreenshotCaptureMode)));
         }
     }
+
+    internal string SessionsRootDirectory => _sessionStore.RootDirectory;
 
     private async void StartRecording_Click(object sender, RoutedEventArgs e)
     {
@@ -249,7 +253,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
             try
             {
-                var screenshot = await _screenshotService.CaptureAsync(_session.OutputDirectory, step.Index, x, y, ScreenshotCaptureMode);
+                var screenshot = await _screenshotService.CaptureAsync(GetSessionImagesDirectory(), step.Index, x, y, ScreenshotCaptureMode);
                 ApplyScreenshotResult(step, screenshot);
                 step.ScreenshotCaptured = true;
             }
@@ -446,7 +450,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         try
         {
-            var screenshot = await _screenshotService.CaptureAsync(_session.OutputDirectory, $"step-{step.Index:000}-{suffix}.png", captureX, captureY, ScreenshotCaptureMode, drawHighlight);
+            var screenshot = await _screenshotService.CaptureAsync(GetSessionImagesDirectory(), $"step-{step.Index:000}-{suffix}.png", captureX, captureY, ScreenshotCaptureMode, drawHighlight);
             ApplyScreenshotResult(step, screenshot);
             step.ScreenshotCaptured = true;
         }
@@ -528,23 +532,64 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         await SaveSessionAsync(showMessage: true);
     }
 
+    internal async Task AutosaveSessionFromEditorAsync()
+    {
+        await SaveSessionAsync(showMessage: false);
+    }
+
     private async void OpenPreviousSession_Click(object sender, RoutedEventArgs e)
+    {
+        await ShowSessionPickerAsync();
+    }
+
+    private async Task ShowSessionPickerAsync()
     {
         try
         {
-            var session = await _sessionStore.LoadLatestAsync();
-            if (session is null)
-            {
-                WinForms.MessageBox.Show("No saved OpenSteps sessions were found.", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Information);
-                return;
-            }
-
-            LoadSession(session);
-            ShowSessionEditor();
+            _sessionPickerWindow ??= new SessionPickerWindow(this);
+            await _sessionPickerWindow.RefreshSessionsAsync();
+            _sessionPickerWindow.Show();
+            _sessionPickerWindow.Activate();
         }
         catch (Exception ex)
         {
-            WinForms.MessageBox.Show($"Could not open the latest session:\n{ex.Message}", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error);
+            WinForms.MessageBox.Show($"Could not open saved sessions:\n{ex.Message}", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error);
+        }
+    }
+
+    internal async Task<IReadOnlyList<SessionSummary>> ListSavedSessionsAsync()
+    {
+        return await _sessionStore.ListSessionsAsync();
+    }
+
+    internal async Task OpenSavedSessionAsync(Guid sessionId)
+    {
+        var session = await _sessionStore.LoadSessionAsync(sessionId);
+        if (session is null)
+        {
+            WinForms.MessageBox.Show("That saved session could not be opened. It may have been deleted or its session.json may be damaged.", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Warning);
+            return;
+        }
+
+        LoadSession(session);
+        ShowSessionEditor();
+    }
+
+    internal async Task RenameSavedSessionAsync(Guid sessionId, string title)
+    {
+        await _sessionStore.RenameSessionAsync(sessionId, title);
+    }
+
+    internal async Task DeleteSavedSessionAsync(Guid sessionId)
+    {
+        await _sessionStore.DeleteSessionAsync(sessionId);
+    }
+
+    internal void SessionPickerClosed(SessionPickerWindow pickerWindow)
+    {
+        if (_sessionPickerWindow == pickerWindow)
+        {
+            _sessionPickerWindow = null;
         }
     }
 
@@ -716,13 +761,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void ResetSession()
     {
+        var sessionId = Guid.NewGuid();
+        var sessionDirectory = Path.Combine(_sessionStore.RootDirectory, sessionId.ToString("N"));
         _session = new RecordingSession
         {
+            Id = sessionId,
             Title = $"OpenSteps Guide {DateTimeOffset.Now:yyyy-MM-dd HH.mm}",
-            OutputDirectory = Path.Combine(Path.GetTempPath(), "OpenSteps", DateTimeOffset.Now.ToString("yyyyMMdd-HHmmss"))
+            SessionDirectory = sessionDirectory,
+            OutputDirectory = sessionDirectory
         };
 
-        Directory.CreateDirectory(_session.OutputDirectory);
+        Directory.CreateDirectory(GetSessionImagesDirectory());
         Steps.Clear();
         SetEditorTitle(_session.Title);
         UpdateSessionSummary();
@@ -743,6 +792,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         RenumberSteps();
         SetEditorTitle(_session.Title);
         UpdateSessionSummary();
+    }
+
+    private string GetSessionImagesDirectory()
+    {
+        var sessionDirectory = string.IsNullOrWhiteSpace(_session.SessionDirectory)
+            ? _session.OutputDirectory
+            : _session.SessionDirectory;
+        var imagesDirectory = Path.Combine(sessionDirectory, "images");
+        Directory.CreateDirectory(imagesDirectory);
+        return imagesDirectory;
     }
 
     private void ShowSessionEditor()
@@ -898,6 +957,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         var point = PointFromScreen(new System.Windows.Point(x, y));
         return point.X >= 0 && point.Y >= 0 && point.X <= ActualWidth && point.Y <= ActualHeight;
+    }
+
+    private void PositionControllerBottomCenter()
+    {
+        var area = SystemParameters.WorkArea;
+        var width = ActualWidth > 0 ? ActualWidth : Width;
+        var height = ActualHeight > 0 ? ActualHeight : Height;
+        Left = area.Left + Math.Max(0, (area.Width - width) / 2);
+        Top = area.Bottom - height - 24;
     }
 
     private (int X, int Y) GetTestCapturePoint()
