@@ -4,29 +4,39 @@
         xmlns:local="clr-namespace:OpenSteps.App"
         Title="Saved OpenSteps Sessions" Width="760" Height="520" MinWidth="620" MinHeight="420"
         WindowStartupLocation="CenterScreen"
-        Background="#F5F7FA">
+        Background="{StaticResource AppBackgroundBrush}">
     <Window.Resources>
         <local:FileImageConverter x:Key="FileImageConverter" />
     </Window.Resources>
     <DockPanel>
-        <Border DockPanel.Dock="Top" Background="White" BorderBrush="#D9DEE8" BorderThickness="0,0,0,1" Padding="18">
+        <Border DockPanel.Dock="Top" Background="{StaticResource PanelBackgroundBrush}" BorderBrush="{StaticResource BorderSoftBrush}"
+                BorderThickness="1" CornerRadius="18" Padding="18" Margin="18,16,18,0">
+            <Border.Effect>
+                <DropShadowEffect Color="#9DB4BE" BlurRadius="16" ShadowDepth="2" Opacity="0.14" />
+            </Border.Effect>
             <DockPanel>
-                <TextBlock Text="Saved Sessions" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock Text="Saved Sessions" FontSize="22" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                    <Button Content="Open Sessions Folder" Click="OpenFolder_Click" Padding="12,7" Margin="0,0,8,0" />
-                    <Button Content="Refresh" Click="Refresh_Click" Padding="12,7" />
+                    <Button Content="&#xE8B7;" ToolTip="Open sessions folder" Click="OpenFolder_Click"
+                            Style="{StaticResource IconButton}" Margin="0,0,8,0" />
+                    <Button Content="&#xE72C;" ToolTip="Refresh" Click="Refresh_Click"
+                            Style="{StaticResource IconButton}" />
                 </StackPanel>
             </DockPanel>
         </Border>
 
         <Grid Margin="18">
-            <TextBlock x:Name="EmptyText" Text="No saved sessions yet." Foreground="#5F6B7A"
+            <TextBlock x:Name="EmptyText" Text="No saved sessions yet." Foreground="{StaticResource TextSecondaryBrush}"
                        HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
             <ListBox x:Name="SessionsList" ItemsSource="{Binding Sessions}" BorderThickness="0" Background="Transparent">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Border Background="White" BorderBrush="#D9DEE8" BorderThickness="1" CornerRadius="6"
+                        <Border Background="{StaticResource PanelBackgroundBrush}" BorderBrush="{StaticResource BorderSoftBrush}" BorderThickness="1" CornerRadius="16"
                                 Padding="12" Margin="0,0,0,10">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#9DB4BE" BlurRadius="12" ShadowDepth="2" Opacity="0.1" />
+                            </Border.Effect>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="96" />
@@ -34,14 +44,15 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
-                                <Border Width="82" Height="58" Background="#EEF2F7" BorderBrush="#CBD5E1" BorderThickness="1">
+                                <Border Width="82" Height="58" Background="{StaticResource SoftSurfaceBrush}" BorderBrush="{StaticResource BorderSoftBrush}" BorderThickness="1"
+                                        CornerRadius="12" ClipToBounds="True">
                                     <Image Source="{Binding ThumbnailPath, Converter={StaticResource FileImageConverter}}" Stretch="UniformToFill" />
                                 </Border>
 
                                 <StackPanel Grid.Column="1" Margin="10,0,14,0">
                                     <TextBox Text="{Binding Title, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                             FontSize="16" FontWeight="SemiBold" BorderBrush="#D9DEE8" Padding="6,4" />
-                                    <TextBlock Foreground="#5F6B7A" Margin="2,6,0,0">
+                                             FontSize="16" FontWeight="SemiBold" Padding="8,4" />
+                                    <TextBlock Foreground="{StaticResource TextSecondaryBrush}" Margin="2,6,0,0">
                                         <Run Text="{Binding StepCount}" />
                                         <Run Text=" steps  Updated " />
                                         <Run Text="{Binding UpdatedAt, StringFormat={}{0:g}}" />
@@ -49,9 +60,12 @@
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button Content="Open" Click="Open_Click" Padding="10,6" Margin="0,0,6,0" />
-                                    <Button Content="Rename" Click="Rename_Click" Padding="10,6" Margin="0,0,6,0" />
-                                    <Button Content="Delete" Click="Delete_Click" Padding="10,6" />
+                                    <Button Content="&#xE8E5;" ToolTip="Open session" Click="Open_Click"
+                                            Style="{StaticResource PrimaryIconButton}" Margin="0,0,6,0" />
+                                    <Button Content="&#xE8AC;" ToolTip="Rename session" Click="Rename_Click"
+                                            Style="{StaticResource IconButton}" Margin="0,0,6,0" />
+                                    <Button Content="&#xE74D;" ToolTip="Delete session" Click="Delete_Click"
+                                            Style="{StaticResource IconButton}" />
                                 </StackPanel>
                             </Grid>
                         </Border>

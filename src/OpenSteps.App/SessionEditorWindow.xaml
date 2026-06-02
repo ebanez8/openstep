@@ -4,7 +4,7 @@
         xmlns:local="clr-namespace:OpenSteps.App"
         Title="OpenSteps" Width="1120" Height="760" MinWidth="920" MinHeight="620"
         WindowStartupLocation="CenterScreen"
-        Background="#F5F7FA">
+        Background="{StaticResource AppBackgroundBrush}">
     <Window.Resources>
         <local:FileImageConverter x:Key="FileImageConverter" />
     </Window.Resources>
@@ -14,7 +14,11 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Border Background="White" BorderBrush="#D9DEE8" BorderThickness="0,0,0,1" Padding="28,20">
+        <Border Background="{StaticResource PanelBackgroundBrush}" BorderBrush="{StaticResource BorderSoftBrush}"
+                BorderThickness="1" CornerRadius="20" Padding="24,18" Margin="20,18,20,0">
+            <Border.Effect>
+                <DropShadowEffect Color="#9DB4BE" BlurRadius="18" ShadowDepth="3" Opacity="0.16" />
+            </Border.Effect>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -24,39 +28,46 @@
                     <TextBox x:Name="SessionTitleBox"
                              FontSize="26" FontWeight="SemiBold"
                              BorderThickness="0" Background="Transparent"
+                             Foreground="{StaticResource TextPrimaryBrush}"
                              TextChanged="SessionTitleBox_TextChanged" />
-                    <TextBlock x:Name="SessionSummaryText" Margin="2,6,0,0" Foreground="#5F6B7A" />
+                    <TextBlock x:Name="SessionSummaryText" Margin="2,6,0,0" Foreground="{StaticResource TextSecondaryBrush}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="Record More" Click="RecordMore_Click" Padding="14,9" />
-                    <Button Content="Save Session" Click="SaveSession_Click"
-                            Margin="10,0,0,0" Padding="14,9" />
-                    <Button Content="Export Markdown" Click="ExportMarkdown_Click"
-                            Margin="10,0,0,0" Padding="16,9" FontWeight="SemiBold" />
+                    <Button Content="&#xE768;" ToolTip="Record more" Click="RecordMore_Click"
+                            Style="{StaticResource IconButton}" />
+                    <Button Content="&#xE74E;" ToolTip="Save" Click="SaveSession_Click"
+                            Style="{StaticResource IconButton}" Margin="10,0,0,0" />
+                    <Button Content="Export" Click="ExportMarkdown_Click"
+                            Margin="10,0,0,0" Padding="16,9"
+                            Style="{StaticResource PrimaryActionButton}" />
                 </StackPanel>
             </Grid>
         </Border>
 
-        <ScrollViewer Grid.Row="1" Padding="28" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="1" Padding="20" VerticalScrollBarVisibility="Auto">
             <ItemsControl x:Name="StepsList" ItemsSource="{Binding Steps}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Background="White" BorderBrush="#D9DEE8" BorderThickness="1"
-                                CornerRadius="6" Margin="0,0,0,18" Padding="18">
-                            <Grid>
+                            <Border Background="{StaticResource PanelBackgroundBrush}" BorderBrush="{StaticResource BorderSoftBrush}" BorderThickness="1"
+                                    CornerRadius="16" Margin="0,0,0,16" Padding="16">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#9DB4BE" BlurRadius="15" ShadowDepth="2" Opacity="0.11" />
+                                </Border.Effect>
+                                <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="300" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
-                                <Border Width="280" Height="170" Background="#EEF2F7"
-                                        BorderBrush="#CBD5E1" BorderThickness="1">
+                                    <Border Width="280" Height="170" Background="{StaticResource SoftSurfaceBrush}"
+                                            BorderBrush="{StaticResource BorderSoftBrush}" BorderThickness="1"
+                                            CornerRadius="14" ClipToBounds="True">
                                     <Grid>
                                         <Image Source="{Binding EffectiveScreenshotPath, Converter={StaticResource FileImageConverter}}" Stretch="Uniform" />
                                         <TextBlock Text="Redacted"
                                                    HorizontalAlignment="Left" VerticalAlignment="Top"
-                                                   Margin="8" Padding="7,3" Background="#111827"
-                                                   Foreground="White" FontSize="11" FontWeight="SemiBold">
+                                                       Margin="8" Padding="8,4" Background="{StaticResource AccentBrush}"
+                                                       Foreground="White" FontSize="11" FontWeight="SemiBold">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Visibility" Value="Collapsed" />
@@ -68,9 +79,10 @@
                                                 </Style>
                                             </TextBlock.Style>
                                         </TextBlock>
-                                        <Button Content="View" Click="ViewScreenshot_Click"
+                                        <Button Content="&#xE890;" ToolTip="View screenshot" Click="ViewScreenshot_Click"
+                                                Style="{StaticResource IconButton}"
                                                 HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                                Margin="0,0,8,8" Padding="8,4" />
+                                                Margin="0,0,8,8" />
                                     </Grid>
                                 </Border>
 
@@ -78,13 +90,17 @@
                                     <DockPanel LastChildFill="True">
                                         <TextBlock DockPanel.Dock="Left"
                                                    Text="{Binding Index, StringFormat=Step {0}}"
-                                                   FontWeight="SemiBold" Foreground="#3B4454"
+                                                       FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}"
                                                    Margin="0,0,14,0" />
                                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                            <Button Content="Edit screenshot" Click="EditScreenshot_Click" Margin="0,0,6,0" Padding="8,4" />
-                                            <Button Content="Up" Click="MoveStepUp_Click" Margin="0,0,6,0" Padding="8,4" />
-                                            <Button Content="Down" Click="MoveStepDown_Click" Margin="0,0,6,0" Padding="8,4" />
-                                            <Button Content="Delete" Click="DeleteStep_Click" Padding="8,4" />
+                                            <Button Content="&#xE70F;" ToolTip="Edit screenshot" Click="EditScreenshot_Click"
+                                                    Style="{StaticResource IconButton}" Margin="0,0,6,0" />
+                                            <Button Content="&#xE74A;" ToolTip="Move up" Click="MoveStepUp_Click"
+                                                    Style="{StaticResource IconButton}" Margin="0,0,6,0" />
+                                            <Button Content="&#xE74B;" ToolTip="Move down" Click="MoveStepDown_Click"
+                                                    Style="{StaticResource IconButton}" Margin="0,0,6,0" />
+                                            <Button Content="&#xE74D;" ToolTip="Delete step" Click="DeleteStep_Click"
+                                                    Style="{StaticResource IconButton}" />
                                         </StackPanel>
                                     </DockPanel>
 
@@ -98,7 +114,7 @@
 
                                     <Expander Header="Capture debug/status" Margin="0,10,0,0">
                                         <TextBlock Text="{Binding MetadataSummary}" TextWrapping="Wrap"
-                                                   FontFamily="Consolas" FontSize="12" Foreground="#4B5565" />
+                                                   FontFamily="Consolas" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
                                     </Expander>
                                 </StackPanel>
                             </Grid>
