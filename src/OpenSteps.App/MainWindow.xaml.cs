@@ -44,6 +44,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private RecordedStep? _screenshotCaptureTargetStep;
     private SessionEditorWindow? _editorWindow;
     private SessionPickerWindow? _sessionPickerWindow;
+    private WinForms.NotifyIcon? _trayIcon;
+    private WinForms.ToolStripMenuItem? _trayPauseItem;
     private int _pendingTypingKeyCount;
     private bool _isRecording;
     private bool _isPaused;
@@ -194,12 +196,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             _keyboardHook = new GlobalKeyboardHook(ShouldIgnoreKeyboard);
             _keyboardHook.KeyboardInputCaptured += KeyboardHook_KeyboardInputCaptured;
             _keyboardHook.Start();
+
+            ShowRecordingTray();
+            Hide();
         }
         catch (Exception ex)
         {
             _isRecording = false;
             _isPaused = false;
             RefreshRecordingStatus();
+            HideRecordingTray();
+            Show();
             WinForms.MessageBox.Show($"Recording could not start:\n{ex.Message}", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error);
             return;
         }
@@ -243,6 +250,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         await Task.Delay(ActivationSettleDelayMs);
+        if (!_isRecording || _isPaused)
+        {
+            return;
+        }
 
         openStepsHandles = GetOpenStepsWindowHandles();
         var foregroundAfterDelay = _activeWindowService.GetForegroundWindowHandle();
@@ -552,6 +563,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         await FinalizePendingTypingAsync();
         _recordingStatusTimer.Stop();
         StopHooks();
+        HideRecordingTray();
+        await RemoveTrailingStopNoiseStepAsync();
 
         ShowSessionEditor();
         await SaveSessionAsync(showMessage: false);
@@ -918,6 +931,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             _isPaused = false;
             _recordingStatusTimer.Stop();
             StopHooks();
+            HideRecordingTray();
 
             step.ClickX = x;
             step.ClickY = y;
@@ -1013,6 +1027,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private async void MainWindow_Closing(object? sender, CancelEventArgs e)
     {
         StopHooks();
+        if (_trayIcon is not null)
+        {
+            _trayIcon.Visible = false;
+            _trayIcon.Dispose();
+            _trayIcon = null;
+        }
+
         if (Steps.Count > 0)
         {
             try
@@ -1138,6 +1159,39 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         RefreshRecordingStatus();
     }
 
+    private async Task RemoveTrailingStopNoiseStepAsync()
+    {
+        await _captureLock.WaitAsync();
+        try
+        {
+            var lastStep = Steps.LastOrDefault();
+            if (lastStep is null || !IsTrailingStopNoiseStep(lastStep))
+            {
+                return;
+            }
+
+            Steps.Remove(lastStep);
+            _session.Steps.Remove(lastStep);
+            RenumberSteps();
+        }
+        finally
+        {
+            _captureLock.Release();
+        }
+    }
+
+    private bool IsTrailingStopNoiseStep(RecordedStep step)
+    {
+        var classification = _clickTargetClassifier.ClassifyPoint(step.ClickX, step.ClickY, GetOpenStepsWindowHandles()).Classification;
+        if (classification is ClickClassification.OpenStepsWindow or ClickClassification.TaskbarOrShell)
+        {
+            return true;
+        }
+
+        var currentProcessName = Process.GetCurrentProcess().ProcessName;
+        return string.Equals(step.ProcessName, currentProcessName, StringComparison.OrdinalIgnoreCase);
+    }
+
     private void SyncSessionOrder()
     {
         _session.Steps.Clear();
@@ -1181,12 +1235,166 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             var stepLabel = Steps.Count == 1 ? "step" : "steps";
             RecordingStatusText.Text = $"{state}  ·  {elapsed:mm\\:ss}  ·  {Steps.Count} {stepLabel}";
             RecordingDot.Visibility = _isPaused ? Visibility.Collapsed : Visibility.Visible;
+            UpdateTrayStatus(state, elapsed, stepLabel);
         }
         else
         {
             RecordingStatusText.Text = string.Empty;
             RecordingDot.Visibility = Visibility.Collapsed;
         }
+    }
+
+    private void EnsureTrayIcon()
+    {
+        if (_trayIcon is not null)
+        {
+            return;
+        }
+
+        var menu = new WinForms.ContextMenuStrip
+        {
+            ShowImageMargin = false
+        };
+
+        var stopItem = new WinForms.ToolStripMenuItem("Stop recording");
+        stopItem.Font = new System.Drawing.Font(stopItem.Font, System.Drawing.FontStyle.Bold);
+        stopItem.Click += async (_, _) => await TrayStopRecordingAsync();
+        menu.Items.Add(stopItem);
+
+        _trayPauseItem = new WinForms.ToolStripMenuItem("Pause recording");
+        _trayPauseItem.Click += (_, _) => TrayTogglePause();
+        menu.Items.Add(_trayPauseItem);
+
+        menu.Items.Add(new WinForms.ToolStripSeparator());
+
+        var showItem = new WinForms.ToolStripMenuItem("Show recorder");
+        showItem.Click += (_, _) => TrayShowRecorder();
+        menu.Items.Add(showItem);
+
+        _trayIcon = new WinForms.NotifyIcon
+        {
+            Icon = LoadTrayIcon(),
+            Text = "OpenSteps",
+            ContextMenuStrip = menu,
+            Visible = false
+        };
+        _trayIcon.DoubleClick += async (_, _) => await TrayStopRecordingAsync();
+    }
+
+    private void ShowRecordingTray()
+    {
+        EnsureTrayIcon();
+        if (_trayIcon is null)
+        {
+            return;
+        }
+
+        _trayIcon.Visible = true;
+        _trayIcon.Text = "OpenSteps — Recording";
+        if (_trayPauseItem is not null)
+        {
+            _trayPauseItem.Text = "Pause recording";
+        }
+
+        try
+        {
+            _trayIcon.ShowBalloonTip(2200, "OpenSteps is recording", "Right-click the tray icon, or double-click it, to stop.", WinForms.ToolTipIcon.None);
+        }
+        catch
+        {
+            // Balloon tips are best-effort.
+        }
+    }
+
+    private void HideRecordingTray()
+    {
+        if (_trayIcon is null)
+        {
+            return;
+        }
+
+        _trayIcon.Visible = false;
+    }
+
+    private void UpdateTrayStatus(string state, TimeSpan elapsed, string stepLabel)
+    {
+        if (_trayIcon is null)
+        {
+            return;
+        }
+
+        // NotifyIcon.Text is limited to 63 chars; keep it compact.
+        var text = $"OpenSteps · {state} {elapsed:mm\\:ss} · {Steps.Count} {stepLabel}";
+        if (text.Length > 63)
+        {
+            text = text.Substring(0, 63);
+        }
+
+        _trayIcon.Text = text;
+
+        if (_trayPauseItem is not null)
+        {
+            _trayPauseItem.Text = _isPaused ? "Resume recording" : "Pause recording";
+        }
+    }
+
+    private async Task TrayStopRecordingAsync()
+    {
+        if (!_isRecording)
+        {
+            return;
+        }
+
+        await Dispatcher.InvokeAsync(async () => await StopRecordingAsync());
+    }
+
+    private void TrayTogglePause()
+    {
+        if (!_isRecording)
+        {
+            return;
+        }
+
+        Dispatcher.Invoke(() =>
+        {
+            _isPaused = !_isPaused;
+            RefreshRecordingStatus();
+        });
+    }
+
+    private void TrayShowRecorder()
+    {
+        Dispatcher.Invoke(() =>
+        {
+            Show();
+            if (WindowState == WindowState.Minimized)
+            {
+                WindowState = WindowState.Normal;
+            }
+            Activate();
+        });
+    }
+
+    private static System.Drawing.Icon LoadTrayIcon()
+    {
+        try
+        {
+            var path = Environment.ProcessPath;
+            if (!string.IsNullOrEmpty(path))
+            {
+                var extracted = System.Drawing.Icon.ExtractAssociatedIcon(path);
+                if (extracted is not null)
+                {
+                    return extracted;
+                }
+            }
+        }
+        catch
+        {
+            // Fall through to system fallback.
+        }
+
+        return System.Drawing.SystemIcons.Application;
     }
 
     private async Task SaveSessionAsync(bool showMessage)

@@ -38,6 +38,58 @@ public sealed class ClickTargetClassifierTests
     }
 
     [Fact]
+    public void TaskbarAncestorClass_ClassifiesAsTaskbarOrShell()
+    {
+        var info = ClickTargetClassifier.CreateInfo(
+            900,
+            1050,
+            new IntPtr(10),
+            new IntPtr(11),
+            "Windows.UI.Composition.DesktopWindowContentBridge",
+            "ApplicationFrameWindow",
+            "explorer",
+            new HashSet<IntPtr>(),
+            ["Windows.UI.Composition.DesktopWindowContentBridge", "TrayNotifyWnd", "Shell_TrayWnd"]);
+
+        Assert.Equal(ClickClassification.TaskbarOrShell, info.Classification);
+    }
+
+    [Fact]
+    public void PointInsideKnownTaskbarBounds_ClassifiesAsTaskbarOrShell()
+    {
+        var info = ClickTargetClassifier.CreateInfo(
+            900,
+            1050,
+            new IntPtr(10),
+            new IntPtr(11),
+            "Windows.UI.Input.InputSite.WindowClass",
+            "XamlExplorerHostIslandWindow",
+            "explorer",
+            new HashSet<IntPtr>(),
+            [],
+            pointInTaskbarBounds: true);
+
+        Assert.Equal(ClickClassification.TaskbarOrShell, info.Classification);
+    }
+
+    [Fact]
+    public void ExplorerWindowWithoutTaskbarClass_IsRecordable()
+    {
+        var info = ClickTargetClassifier.CreateInfo(
+            400,
+            400,
+            new IntPtr(10),
+            new IntPtr(11),
+            "DirectUIHWND",
+            "CabinetWClass",
+            "explorer",
+            new HashSet<IntPtr>(),
+            ["DirectUIHWND", "SHELLDLL_DefView"]);
+
+        Assert.Equal(ClickClassification.RecordableAppWindow, info.Classification);
+    }
+
+    [Fact]
     public void RegisteredOpenStepsHandle_ClassifiesAsOpenStepsWindow()
     {
         var openStepsHandle = new IntPtr(42);

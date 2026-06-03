@@ -16,6 +16,8 @@ public sealed class ClickTargetInfo
 
     public string? ProcessName { get; set; }
 
+    public IReadOnlyList<string> AncestorClassNames { get; set; } = [];
+
     public ClickClassification Classification { get; set; }
 
     public string? SkipReason { get; set; }

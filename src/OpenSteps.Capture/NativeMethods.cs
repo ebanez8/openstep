@@ -26,6 +26,16 @@ internal static partial class NativeMethods
     [LibraryImport("user32.dll")]
     internal static partial IntPtr GetAncestor(IntPtr hwnd, uint gaFlags);
 
+    [LibraryImport("user32.dll")]
+    internal static partial IntPtr GetParent(IntPtr hwnd);
+
+    [LibraryImport("user32.dll", EntryPoint = "FindWindowW", StringMarshalling = StringMarshalling.Utf16)]
+    internal static partial IntPtr FindWindow(string? className, string? windowName);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
+
     [LibraryImport("user32.dll", EntryPoint = "GetClassNameW", StringMarshalling = StringMarshalling.Utf16)]
     internal static partial int GetClassName(IntPtr hWnd, Span<char> className, int maxCount);
 
@@ -76,6 +86,8 @@ internal static partial class NativeMethods
     internal static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out RECT pvAttribute, int cbAttribute);
 
     internal delegate bool MonitorEnumProc(IntPtr monitorHandle, IntPtr hdcMonitor, ref RECT monitorRect, IntPtr data);
+
+    internal delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
 
     internal enum DPI_AWARENESS
     {
