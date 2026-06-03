@@ -23,6 +23,8 @@
                             Padding="12,6" Margin="0,0,8,0" FontWeight="SemiBold" />
                     <Button x:Name="RedCircleToolButton" Content="Circle" ToolTip="Draw red circle"
                             Click="RedCircleTool_Click"
+                            Padding="12,6" Margin="0,0,8,0" />
+                    <Button Content="Crop" ToolTip="Crop screenshot" Click="Crop_Click"
                             Padding="12,6" Margin="0,0,18,0" />
                 </StackPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
@@ -31,9 +33,7 @@
                     <Button Content="&#xE894;" ToolTip="Clear all" Click="ClearAll_Click"
                             Style="{StaticResource IconButton}" Margin="0,0,8,0" />
                     <Button Content="&#xE74E;" ToolTip="Save" Click="Save_Click"
-                            Style="{StaticResource PrimaryIconButton}" Margin="0,0,8,0" />
-                    <Button Content="&#xE711;" ToolTip="Cancel" Click="Cancel_Click"
-                            Style="{StaticResource IconButton}" />
+                            Style="{StaticResource PrimaryIconButton}" />
                 </StackPanel>
             </DockPanel>
         </Border>

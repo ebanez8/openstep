@@ -1,96 +1,88 @@
-using System.Text;
 using OpenSteps.Core.Models;
 
 namespace OpenSteps.Core.Services;
 
 public sealed class MarkdownExporter
 {
-    public string GetAvailableExportDirectory(string requestedDirectory)
+    private readonly MarkdownBuilder _markdownBuilder;
+
+    public MarkdownExporter(MarkdownBuilder? markdownBuilder = null)
     {
-        if (!Directory.Exists(requestedDirectory))
-        {
-            return requestedDirectory;
-        }
+        _markdownBuilder = markdownBuilder ?? new MarkdownBuilder();
+    }
 
-        var hasGuide = File.Exists(Path.Combine(requestedDirectory, "guide.md"));
-        var hasImages = Directory.Exists(Path.Combine(requestedDirectory, "images"));
-        if (!hasGuide && !hasImages)
+    public string GetUniqueExportFolder(string parentFolder, string sessionTitle)
+    {
+        var safeName = ToSafeFolderName(sessionTitle);
+        var candidate = Path.Combine(parentFolder, safeName);
+        if (!Directory.Exists(candidate))
         {
-            return requestedDirectory;
-        }
-
-        var parent = Directory.GetParent(requestedDirectory)?.FullName ?? requestedDirectory;
-        var name = Path.GetFileName(requestedDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            name = "OpenStepsExport";
+            return candidate;
         }
 
         for (var i = 1; i < 1000; i++)
         {
-            var candidate = Path.Combine(parent, $"{name}-{i:000}");
+            candidate = Path.Combine(parentFolder, $"{safeName} ({i})");
             if (!Directory.Exists(candidate))
             {
                 return candidate;
             }
         }
 
-        return Path.Combine(parent, $"{name}-{DateTimeOffset.Now:yyyyMMdd-HHmmss}");
+        return Path.Combine(parentFolder, $"{safeName} ({DateTimeOffset.Now:yyyyMMdd-HHmmss})");
     }
 
-    public async Task<string> ExportAsync(RecordingSession session, string exportDirectory, CancellationToken cancellationToken = default)
+    public string ToSafeFolderName(string title)
     {
-        exportDirectory = GetAvailableExportDirectory(exportDirectory);
-        Directory.CreateDirectory(exportDirectory);
-        var imageDirectory = Path.Combine(exportDirectory, "images");
+        var safe = string.Join(string.Empty, (title ?? string.Empty).Select(ch => Path.GetInvalidFileNameChars().Contains(ch) ? '-' : ch)).Trim();
+        safe = string.Join(" ", safe.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        if (safe.Length > 80)
+        {
+            safe = safe[..80].Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(safe) ? "OpenSteps Guide" : safe;
+    }
+
+    public async Task<ExportResult> ExportAsync(RecordingSession session, string parentFolder, CancellationToken cancellationToken = default)
+    {
+        var exportFolder = GetUniqueExportFolder(parentFolder, session.Title);
+        Directory.CreateDirectory(exportFolder);
+        var imageDirectory = Path.Combine(exportFolder, "images");
         Directory.CreateDirectory(imageDirectory);
 
-        var markdown = new StringBuilder();
-        markdown.AppendLine($"# {EscapeHeading(session.Title)}");
-        markdown.AppendLine();
-        markdown.AppendLine("Created with OpenSteps.");
-        markdown.AppendLine();
-
+        var warnings = new List<string>();
         for (var i = 0; i < session.Steps.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             var step = session.Steps[i];
-            var number = i + 1;
-            var title = string.IsNullOrWhiteSpace(step.DisplayTitle) ? $"Step {number}" : step.DisplayTitle;
-            markdown.AppendLine($"## Step {number}: {title}");
-            markdown.AppendLine();
-
             var screenshotPath = GetExportScreenshotPath(step);
-            if (!string.IsNullOrWhiteSpace(screenshotPath) && File.Exists(screenshotPath))
+            if (string.IsNullOrWhiteSpace(screenshotPath))
             {
-                var imageName = $"step-{number:000}.png";
-                var destination = Path.Combine(imageDirectory, imageName);
-                File.Copy(screenshotPath, destination, overwrite: true);
-                markdown.AppendLine($"![Step {number}](images/{imageName})");
-                markdown.AppendLine();
-            }
-            else if (!string.IsNullOrWhiteSpace(step.CaptureError))
-            {
-                markdown.AppendLine($"> Screenshot unavailable: {step.CaptureError}");
-                markdown.AppendLine();
+                continue;
             }
 
-            if (!string.IsNullOrWhiteSpace(step.UserDescription))
+            if (!File.Exists(screenshotPath))
             {
-                markdown.AppendLine(step.UserDescription.Trim());
-                markdown.AppendLine();
+                warnings.Add($"Step {i + 1} screenshot was missing and was skipped.");
+                continue;
             }
+
+            var destination = Path.Combine(imageDirectory, $"step-{i + 1:000}.png");
+            File.Copy(screenshotPath, destination, overwrite: false);
         }
 
-        var guidePath = Path.Combine(exportDirectory, "guide.md");
-        await File.WriteAllTextAsync(guidePath, markdown.ToString(), cancellationToken);
-        return guidePath;
-    }
+        var markdown = _markdownBuilder.BuildMarkdown(session);
+        var guidePath = Path.Combine(exportFolder, "guide.md");
+        await File.WriteAllTextAsync(guidePath, markdown, cancellationToken);
 
-    private static string EscapeHeading(string value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? "Untitled OpenSteps Guide" : value.Trim();
+        return new ExportResult
+        {
+            ExportFolder = exportFolder,
+            MarkdownPath = guidePath,
+            Warnings = warnings
+        };
     }
 
     private static string? GetExportScreenshotPath(RecordedStep step)

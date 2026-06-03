@@ -42,6 +42,8 @@ public partial class ScreenshotRedactionWindow : Window
 
     public IReadOnlyList<RedactionRegion> Redactions => _redactions;
 
+    public bool CropRequested { get; private set; }
+
     private void OverlayCanvas_MouseDown(object sender, MouseButtonEventArgs e)
     {
         if (e.LeftButton != MouseButtonState.Pressed)
@@ -120,6 +122,13 @@ public partial class ScreenshotRedactionWindow : Window
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
+        DialogResult = true;
+        Close();
+    }
+
+    private void Crop_Click(object sender, RoutedEventArgs e)
+    {
+        CropRequested = true;
         DialogResult = true;
         Close();
     }

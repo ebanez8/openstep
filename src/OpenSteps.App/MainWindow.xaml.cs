@@ -25,6 +25,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly DpiAwarenessService _dpiAwarenessService = new();
     private readonly ScreenshotRedactionService _redactionService = new();
     private readonly StepTitleGenerator _titleGenerator = new();
+    private readonly MarkdownBuilder _markdownBuilder = new();
     private readonly MarkdownExporter _markdownExporter = new();
     private readonly SessionStore _sessionStore = new();
     private readonly SettingsService _settingsService = new();
@@ -36,6 +37,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private GlobalMouseHook? _mouseHook;
     private GlobalKeyboardHook? _keyboardHook;
     private RecordedStep? _pendingTypingStep;
+    private RecordedStep? _screenshotCaptureTargetStep;
     private SessionEditorWindow? _editorWindow;
     private SessionPickerWindow? _sessionPickerWindow;
     private int _pendingTypingKeyCount;
@@ -213,12 +215,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        Dispatcher.BeginInvoke(async () => await CaptureStepAsync(e.X, e.Y));
+        Dispatcher.BeginInvoke(async () =>
+        {
+            if (_screenshotCaptureTargetStep is { } targetStep)
+            {
+                await CaptureScreenshotForExistingStepAsync(targetStep, e.X, e.Y);
+                return;
+            }
+
+            await CaptureStepAsync(e.X, e.Y);
+        });
     }
 
     private void KeyboardHook_KeyboardInputCaptured(object? sender, KeyboardInputEventArgs e)
     {
-        if (!_isRecording || _isPaused)
+        if (!_isRecording || _isPaused || _screenshotCaptureTargetStep is not null)
         {
             return;
         }
@@ -531,7 +542,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         using var dialog = new WinForms.FolderBrowserDialog
         {
-            Description = "Choose a folder for guide.md and images",
+            Description = "Choose where to create the exported guide folder",
             UseDescriptionForTitle = true
         };
 
@@ -545,27 +556,27 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             SyncSessionOrder();
             _session.Title = GetCurrentSessionTitle();
             await SaveSessionAsync(showMessage: false);
-            var path = await _markdownExporter.ExportAsync(_session, dialog.SelectedPath);
-            var result = WinForms.MessageBox.Show(
-                $"Exported guide:\n{path}\n\nOpen the export folder now?",
-                "OpenSteps",
-                WinForms.MessageBoxButtons.YesNo,
-                WinForms.MessageBoxIcon.Information);
-
-            if (result == WinForms.DialogResult.Yes)
+            var result = await _markdownExporter.ExportAsync(_session, dialog.SelectedPath);
+            new ExportResultWindow(result)
             {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "explorer.exe",
-                    Arguments = $"/select,\"{path}\"",
-                    UseShellExecute = true
-                });
-            }
+                Owner = _editorWindow
+            }.ShowDialog();
         }
         catch (Exception ex)
         {
             WinForms.MessageBox.Show($"Export failed:\n{ex.Message}", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error);
         }
+    }
+
+    internal async Task PreviewMarkdownFromEditorAsync()
+    {
+        SyncSessionOrder();
+        _session.Title = GetCurrentSessionTitle();
+        await SaveSessionAsync(showMessage: false);
+        new MarkdownPreviewWindow(_markdownBuilder.BuildMarkdown(_session), _session)
+        {
+            Owner = _editorWindow
+        }.ShowDialog();
     }
 
     internal async Task SaveSessionFromEditorAsync()
@@ -644,6 +655,39 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             _sessionPickerWindow = null;
         }
+    }
+
+    internal async Task AddManualStepFromEditorAsync()
+    {
+        StepEditorOperations.AddManualStepAtEnd(Steps);
+        SyncSessionOrder();
+        await SaveSessionAsync(showMessage: false);
+    }
+
+    internal async Task InsertManualStepBelowFromEditorAsync(object sender)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not RecordedStep step)
+        {
+            return;
+        }
+
+        StepEditorOperations.InsertManualStepBelow(Steps, step);
+        SyncSessionOrder();
+        await SaveSessionAsync(showMessage: false);
+    }
+
+    internal async Task CaptureScreenshotForStepFromEditorAsync(object sender)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not RecordedStep step)
+        {
+            return;
+        }
+
+        _screenshotCaptureTargetStep = step;
+        _editorWindow?.Hide();
+        Show();
+        Activate();
+        await StartRecordingAsync();
     }
 
     internal void DeleteStepFromEditor(object sender)
@@ -752,6 +796,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 return;
             }
 
+            if (editor.CropRequested)
+            {
+                await CropScreenshotForStepAsync(step);
+                return;
+            }
+
             var outputPath = GetEditedScreenshotPath(step);
             step.Redactions = [.. editor.Redactions];
             if (step.Redactions.Count == 0)
@@ -770,6 +820,147 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         catch (Exception ex)
         {
             WinForms.MessageBox.Show($"Screenshot could not be edited:\n{ex.Message}", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error);
+        }
+    }
+
+    private async Task CropScreenshotForStepAsync(RecordedStep step)
+    {
+        if (string.IsNullOrWhiteSpace(step.EffectiveScreenshotPath)
+            || !File.Exists(step.EffectiveScreenshotPath))
+        {
+            WinForms.MessageBox.Show("No screenshot is available to crop for this step.", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Information);
+            return;
+        }
+
+        try
+        {
+            var cropWindow = new CropWindow(step.EffectiveScreenshotPath)
+            {
+                Owner = _editorWindow,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+
+            if (cropWindow.ShowDialog() != true)
+            {
+                return;
+            }
+
+            var source = LoadBitmapFrame(step.EffectiveScreenshotPath);
+            var cropRect = cropWindow.CropRect;
+            if (cropRect.Width <= 0 || cropRect.Height <= 0)
+            {
+                WinForms.MessageBox.Show("The selected crop area was empty.", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Information);
+                return;
+            }
+
+            var cropped = new CroppedBitmap(source, cropRect);
+            var outputPath = GetCroppedScreenshotPath(step);
+            using (var stream = File.Create(outputPath))
+            {
+                var encoder = new PngBitmapEncoder();
+                encoder.Frames.Add(BitmapFrame.Create(cropped));
+                encoder.Save(stream);
+            }
+
+            step.ScreenshotPath = outputPath;
+            step.ScreenshotRelativePath = Path.Combine("images", Path.GetFileName(outputPath)).Replace('\\', '/');
+            step.EditedScreenshotPath = null;
+            step.EditedScreenshotRelativePath = null;
+            step.Redactions.Clear();
+            step.ScreenshotCaptured = true;
+            step.ScreenshotWidth = cropped.PixelWidth;
+            step.ScreenshotHeight = cropped.PixelHeight;
+
+            RefreshStepViews();
+            await SaveSessionAsync(showMessage: false);
+        }
+        catch (Exception ex)
+        {
+            WinForms.MessageBox.Show($"Screenshot could not be cropped:\n{ex.Message}", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error);
+        }
+    }
+
+    private async Task CaptureScreenshotForExistingStepAsync(RecordedStep step, int x, int y)
+    {
+        try
+        {
+            _screenshotCaptureTargetStep = null;
+            _isRecording = false;
+            _isPaused = false;
+            _recordingStatusTimer.Stop();
+            StopHooks();
+
+            step.ClickX = x;
+            step.ClickY = y;
+            step.VirtualScreenBounds = GetVirtualScreenBounds();
+            step.ProcessDpiAwareness = _dpiAwarenessService.GetCurrentThreadAwareness();
+
+            try
+            {
+                var activeWindow = _activeWindowService.Capture();
+                step.ActiveWindowHandle = activeWindow.Handle;
+                step.WindowTitle = activeWindow.Title;
+                step.ProcessName = activeWindow.ProcessName;
+                step.ExecutablePath = activeWindow.ExecutablePath;
+                step.WindowBounds = activeWindow.Bounds;
+                step.ClickInsideActiveWindowBounds = ContainsBounds(activeWindow.Bounds, x, y);
+            }
+            catch (Exception ex)
+            {
+                step.CaptureError = AppendError(step.CaptureError, $"Window metadata failed: {ex.Message}");
+            }
+
+            try
+            {
+                var element = _uiAutomationService.GetElementAt(x, y);
+                step.UiAutomationSucceeded = element.Quality != UiAutomationQuality.UiAutomationFailed;
+                step.UiAutomationQuality = element.Quality;
+                step.UsefulElementFound = element.UsefulElementFound;
+                step.RawElementDebug = element.RawElementDebug;
+                step.ParentChainDebug = element.ParentChainDebug;
+                step.CandidateElementsDebug = element.CandidateElementsDebug;
+                if (element is not null)
+                {
+                    step.ElementName = element.Name;
+                    step.AutomationId = element.AutomationId;
+                    step.ControlType = element.ControlType;
+                    step.ClassName = element.ClassName;
+                    step.ElementBounds = element.Bounds;
+                    step.ParentElementName = element.ParentName;
+                    step.InputTargetName = element.IsEditable && element.UsefulElementFound ? element.Name : null;
+                    step.InputTargetControlType = element.ControlType;
+                    step.IsSensitiveInput = element.IsPassword;
+                }
+            }
+            catch (Exception ex)
+            {
+                step.CaptureError = AppendError(step.CaptureError, $"UI Automation failed: {ex.Message}");
+            }
+
+            var title = _titleGenerator.GenerateWithReason(step);
+            step.GeneratedTitle = title.Title;
+            step.GeneratedTitleReason = title.Reason;
+            if (string.IsNullOrWhiteSpace(step.UserTitle) || step.UserTitle == "New step" || step.UserTitle == "Manual step")
+            {
+                step.UserTitle = title.Title;
+            }
+
+            var screenshot = await _screenshotService.CaptureAsync(GetSessionImagesDirectory(), $"step-{step.Index:000}-manual.png", x, y, ScreenshotMode);
+            ApplyScreenshotResult(step, screenshot);
+            step.ScreenshotCaptured = true;
+            SyncSessionOrder();
+            await SaveSessionAsync(showMessage: false);
+        }
+        catch (Exception ex)
+        {
+            step.ScreenshotCaptured = false;
+            step.CaptureError = AppendError(step.CaptureError, $"Manual screenshot failed: {ex.Message}");
+        }
+        finally
+        {
+            _screenshotCaptureTargetStep = null;
+            RefreshRecordingStatus();
+            ShowSessionEditor();
         }
     }
 
@@ -1131,6 +1322,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var directory = Path.GetDirectoryName(original) ?? ".";
         var name = Path.GetFileNameWithoutExtension(original);
         return Path.Combine(directory, $"{name}-redacted.png");
+    }
+
+    private string GetCroppedScreenshotPath(RecordedStep step)
+    {
+        var imagesDirectory = GetSessionImagesDirectory();
+        var baseName = $"step-{step.Index:000}";
+        return Path.Combine(imagesDirectory, $"{baseName}-crop-{DateTimeOffset.Now:yyyyMMdd-HHmmssfff}.png");
+    }
+
+    private static BitmapFrame LoadBitmapFrame(string path)
+    {
+        var bitmap = new BitmapImage();
+        bitmap.BeginInit();
+        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+        bitmap.UriSource = new Uri(path, UriKind.Absolute);
+        bitmap.EndInit();
+        bitmap.Freeze();
+        return BitmapFrame.Create(bitmap);
     }
 
     private static string AppendError(string? existing, string next)

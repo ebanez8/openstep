@@ -1,0 +1,35 @@
+<Window x:Class="OpenSteps.App.ExportResultWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Export Complete" Width="620" Height="360" MinWidth="520" MinHeight="300"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource AppBackgroundBrush}">
+    <DockPanel Margin="18">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="Open Folder" Click="OpenFolder_Click"
+                    Padding="16,0" Height="34"
+                    Style="{StaticResource PrimaryActionButton}" />
+            <Button Content="Copy Path" Click="CopyPath_Click"
+                    Margin="10,0,0,0" Padding="16,0" Height="34" />
+            <Button Content="Close" Click="Close_Click"
+                    Margin="10,0,0,0" Padding="16,0" Height="34" />
+        </StackPanel>
+
+        <StackPanel>
+            <TextBlock Text="Export complete" FontSize="22" FontWeight="SemiBold"
+                       Foreground="{StaticResource TextPrimaryBrush}" />
+            <TextBlock x:Name="PathText" Margin="0,10,0,0"
+                       TextWrapping="Wrap"
+                       Foreground="{StaticResource TextSecondaryBrush}" />
+            <TextBlock Text="Warnings" Margin="0,18,0,6"
+                       FontWeight="SemiBold"
+                       Foreground="{StaticResource TextPrimaryBrush}" />
+            <TextBox x:Name="WarningsTextBox"
+                     IsReadOnly="True"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     VerticalScrollBarVisibility="Auto"
+                     MinHeight="120" />
+        </StackPanel>
+    </DockPanel>
+</Window>

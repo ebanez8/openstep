@@ -14,8 +14,10 @@ OpenSteps is a modern open-source Steps Recorder for Windows. It records desktop
 - UI Automation metadata for useful editable step titles.
 - Screenshot click highlights.
 - Manual screenshot editing with local pixelated redactions and optional red circles before export.
-- Editable step list with delete and move controls.
-- Markdown export with local `images/step-001.png` assets.
+- Screenshot cropping for reducing irrelevant or private screenshot areas.
+- Editable step list with manual steps, collapsible cards, delete, and move controls.
+- Markdown preview with copy support before export.
+- Markdown export that creates a portable `guide.md` plus ordered local `images/step-001.png` assets.
 
 ## Why It Exists
 
@@ -45,6 +47,10 @@ The screenshot mode setting controls how much of the desktop is captured. Full d
 OpenSteps saves recordings locally as sessions under `%LOCALAPPDATA%\OpenSteps\Sessions`. Each session has its own folder with `session.json` and local screenshots. Users can reopen previous recordings, edit them, rename them, delete them, and export Markdown again. Export copies images into the chosen export folder and uses relative Markdown links; it does not link directly to AppData paths.
 
 Screenshots may contain sensitive data. Before exporting or sharing a guide, review each screenshot and use manual redaction to hide private information. This is especially important after any fallback from active-window capture to full desktop capture. OpenSteps does not upload screenshots and does not automatically detect sensitive information.
+
+Screenshot cropping can help remove irrelevant or sensitive areas before export, but users should still review every screenshot before sharing a guide.
+
+Exports are written as portable folders that contain `guide.md` and an `images` subfolder. Image links are relative, so exported guides do not point back to `%LOCALAPPDATA%` session paths. If an export folder name already exists, OpenSteps creates a numbered folder such as `Guide Title (1)` instead of overwriting it.
 
 ## Roadmap
 

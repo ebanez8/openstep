@@ -6,13 +6,71 @@ namespace OpenSteps.Tests;
 public sealed class MarkdownExporterTests
 {
     [Fact]
-    public async Task ExportAsync_WritesGuideAndSequentialImages()
+    public void MarkdownBuilder_HandlesManualStepWithoutScreenshot()
+    {
+        var session = new RecordingSession { Title = "Manual Guide" };
+        session.Steps.Add(new RecordedStep
+        {
+            ActionType = StepActionType.Manual,
+            GeneratedTitle = "Manual step",
+            UserTitle = "New step",
+            UserDescription = "User description here."
+        });
+
+        var markdown = new MarkdownBuilder().BuildMarkdown(session);
+
+        Assert.Contains("## Step 1: New step", markdown);
+        Assert.Contains("User description here.", markdown);
+        Assert.DoesNotContain("![Step 1]", markdown);
+    }
+
+    [Fact]
+    public void MarkdownBuilder_UsesEditedTitleOverGeneratedTitle()
+    {
+        var session = new RecordingSession { Title = "Titles" };
+        session.Steps.Add(new RecordedStep { GeneratedTitle = "Generated", UserTitle = "Edited" });
+
+        var markdown = new MarkdownBuilder().BuildMarkdown(session);
+
+        Assert.Contains("## Step 1: Edited", markdown);
+        Assert.DoesNotContain("## Step 1: Generated", markdown);
+    }
+
+    [Fact]
+    public void MarkdownBuilder_RespectsCurrentStepOrder()
+    {
+        var session = new RecordingSession { Title = "Order Test" };
+        session.Steps.Add(new RecordedStep { GeneratedTitle = "Second" });
+        session.Steps.Add(new RecordedStep { GeneratedTitle = "First" });
+        session.Steps.Reverse();
+
+        var markdown = new MarkdownBuilder().BuildMarkdown(session);
+
+        Assert.True(markdown.IndexOf("## Step 1: First", StringComparison.Ordinal) < markdown.IndexOf("## Step 2: Second", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void MarkdownBuilder_DoesNotEmitImageLinkForMissingScreenshot()
+    {
+        var session = new RecordingSession { Title = "Missing Screenshot" };
+        session.Steps.Add(new RecordedStep
+        {
+            GeneratedTitle = "Missing",
+            ScreenshotPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "missing.png")
+        });
+
+        var markdown = new MarkdownBuilder().BuildMarkdown(session);
+
+        Assert.Contains("## Step 1: Missing", markdown);
+        Assert.DoesNotContain("images/step-001.png", markdown);
+    }
+
+    [Fact]
+    public async Task ExportAsync_WritesGuideAndSequentialImagesInPortableFolder()
     {
         var temp = Path.Combine(Path.GetTempPath(), "OpenSteps.Tests", Guid.NewGuid().ToString("N"));
         var source = Path.Combine(temp, "source");
-        var export = Path.Combine(temp, "export");
         Directory.CreateDirectory(source);
-        Directory.CreateDirectory(export);
         var image = Path.Combine(source, "capture.png");
         await File.WriteAllBytesAsync(image, [1, 2, 3]);
 
@@ -25,48 +83,31 @@ public sealed class MarkdownExporterTests
             ScreenshotPath = image
         });
 
-        var guidePath = await new MarkdownExporter().ExportAsync(session, export);
+        var result = await new MarkdownExporter().ExportAsync(session, temp);
 
-        Assert.True(File.Exists(guidePath));
-        Assert.True(File.Exists(Path.Combine(export, "images", "step-001.png")));
-        var markdown = await File.ReadAllTextAsync(guidePath);
+        Assert.True(File.Exists(result.MarkdownPath));
+        Assert.Equal(Path.Combine(temp, "Test Guide"), result.ExportFolder);
+        Assert.True(File.Exists(Path.Combine(result.ExportFolder, "images", "step-001.png")));
+        var markdown = await File.ReadAllTextAsync(result.MarkdownPath);
         Assert.Contains("# Test Guide", markdown);
         Assert.Contains("## Step 1: Open File menu", markdown);
         Assert.Contains("![Step 1](images/step-001.png)", markdown);
-        Assert.Contains("Choose the main menu.", markdown);
+        Assert.DoesNotContain("AppData", markdown, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task ExportAsync_UsesAvailableFolderWhenGuideAlreadyExists()
+    public async Task ExportAsync_CreatesUniqueFolderWhenTitleExists()
     {
         var temp = Path.Combine(Path.GetTempPath(), "OpenSteps.Tests", Guid.NewGuid().ToString("N"));
-        var export = Path.Combine(temp, "export");
-        Directory.CreateDirectory(export);
-        await File.WriteAllTextAsync(Path.Combine(export, "guide.md"), "existing");
+        Directory.CreateDirectory(Path.Combine(temp, "Conflict Test"));
 
         var session = new RecordingSession { Title = "Conflict Test" };
         session.Steps.Add(new RecordedStep { GeneratedTitle = "Click" });
 
-        var guidePath = await new MarkdownExporter().ExportAsync(session, export);
+        var result = await new MarkdownExporter().ExportAsync(session, temp);
 
-        Assert.NotEqual(Path.Combine(export, "guide.md"), guidePath);
-        Assert.EndsWith(Path.Combine("export-001", "guide.md"), guidePath);
-        Assert.True(File.Exists(guidePath));
-    }
-
-    [Fact]
-    public async Task ExportAsync_UsesCurrentStepOrder()
-    {
-        var temp = Path.Combine(Path.GetTempPath(), "OpenSteps.Tests", Guid.NewGuid().ToString("N"));
-        var session = new RecordingSession { Title = "Order Test" };
-        session.Steps.Add(new RecordedStep { GeneratedTitle = "Second" });
-        session.Steps.Add(new RecordedStep { GeneratedTitle = "First" });
-        session.Steps.Reverse();
-
-        var guidePath = await new MarkdownExporter().ExportAsync(session, temp);
-        var markdown = await File.ReadAllTextAsync(guidePath);
-
-        Assert.True(markdown.IndexOf("## Step 1: First", StringComparison.Ordinal) < markdown.IndexOf("## Step 2: Second", StringComparison.Ordinal));
+        Assert.Equal(Path.Combine(temp, "Conflict Test (1)"), result.ExportFolder);
+        Assert.True(File.Exists(result.MarkdownPath));
     }
 
     [Fact]
@@ -85,10 +126,10 @@ public sealed class MarkdownExporterTests
         session.Steps.Add(new RecordedStep { GeneratedTitle = "First", ScreenshotPath = firstImage });
         session.Steps.Add(new RecordedStep { GeneratedTitle = "Second", ScreenshotPath = secondImage });
 
-        await new MarkdownExporter().ExportAsync(session, temp);
+        var result = await new MarkdownExporter().ExportAsync(session, temp);
 
-        Assert.Equal([1], await File.ReadAllBytesAsync(Path.Combine(temp, "images", "step-001.png")));
-        Assert.Equal([2], await File.ReadAllBytesAsync(Path.Combine(temp, "images", "step-002.png")));
+        Assert.Equal([1], await File.ReadAllBytesAsync(Path.Combine(result.ExportFolder, "images", "step-001.png")));
+        Assert.Equal([2], await File.ReadAllBytesAsync(Path.Combine(result.ExportFolder, "images", "step-002.png")));
     }
 
     [Fact]
@@ -106,26 +147,48 @@ public sealed class MarkdownExporterTests
         var session = new RecordingSession { Title = "Edited Export Test" };
         session.Steps.Add(new RecordedStep { GeneratedTitle = "Step", ScreenshotPath = original, EditedScreenshotPath = edited });
 
-        await new MarkdownExporter().ExportAsync(session, temp);
+        var result = await new MarkdownExporter().ExportAsync(session, temp);
 
-        Assert.Equal([9], await File.ReadAllBytesAsync(Path.Combine(temp, "images", "step-001.png")));
+        Assert.Equal([9], await File.ReadAllBytesAsync(Path.Combine(result.ExportFolder, "images", "step-001.png")));
     }
 
     [Fact]
-    public async Task ExportAsync_FallsBackToOriginalScreenshotWhenEditedMissing()
+    public async Task ExportAsync_SkipsMissingScreenshotAndReturnsWarning()
     {
         var temp = Path.Combine(Path.GetTempPath(), "OpenSteps.Tests", Guid.NewGuid().ToString("N"));
         var source = Path.Combine(temp, "source");
         Directory.CreateDirectory(source);
 
-        var original = Path.Combine(source, "original.png");
-        await File.WriteAllBytesAsync(original, [3]);
+        var original = Path.Combine(source, "missing.png");
+        var session = new RecordingSession { Title = "Missing Export Test" };
+        session.Steps.Add(new RecordedStep { GeneratedTitle = "Step", ScreenshotPath = original });
 
-        var session = new RecordingSession { Title = "Fallback Export Test" };
-        session.Steps.Add(new RecordedStep { GeneratedTitle = "Step", ScreenshotPath = original, EditedScreenshotPath = Path.Combine(source, "missing.png") });
+        var result = await new MarkdownExporter().ExportAsync(session, temp);
+        var markdown = await File.ReadAllTextAsync(result.MarkdownPath);
 
-        await new MarkdownExporter().ExportAsync(session, temp);
+        Assert.Contains("Step 1 screenshot was missing", Assert.Single(result.Warnings));
+        Assert.DoesNotContain("images/step-001.png", markdown);
+    }
 
-        Assert.Equal([3], await File.ReadAllBytesAsync(Path.Combine(temp, "images", "step-001.png")));
+    [Fact]
+    public void GetUniqueExportFolder_UsesTitleAndNumericSuffix()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "OpenSteps.Tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(temp, "Title"));
+
+        var folder = new MarkdownExporter().GetUniqueExportFolder(temp, "Title");
+
+        Assert.Equal(Path.Combine(temp, "Title (1)"), folder);
+    }
+
+    [Fact]
+    public void ToSafeFolderName_RemovesInvalidFilenameCharacters()
+    {
+        var safe = new MarkdownExporter().ToSafeFolderName("Bad<>:\"/\\|?* Name");
+
+        Assert.DoesNotContain('<', safe);
+        Assert.DoesNotContain('>', safe);
+        Assert.Contains("Bad", safe);
+        Assert.Contains("Name", safe);
     }
 }

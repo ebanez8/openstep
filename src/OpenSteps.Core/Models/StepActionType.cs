@@ -5,5 +5,6 @@ public enum StepActionType
     Click,
     TextEntry,
     Shortcut,
-    SpecialKey
+    SpecialKey,
+    Manual
 }
