@@ -43,44 +43,115 @@
         <Grid Margin="18">
             <TextBlock x:Name="EmptyText" Text="No saved sessions yet." Foreground="{StaticResource TextSecondaryBrush}"
                        HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
-            <ListBox x:Name="SessionsList" ItemsSource="{Binding Sessions}" BorderThickness="0" Background="Transparent">
+            <ListBox x:Name="SessionsList" ItemsSource="{Binding Sessions}"
+                     BorderThickness="0" Background="Transparent"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="{Binding SessionGridColumns}" />
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                        <Setter Property="Margin" Value="0" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Border Background="{StaticResource PanelBackgroundBrush}" BorderBrush="{StaticResource BorderSoftBrush}" BorderThickness="1" CornerRadius="16"
-                                Padding="12" Margin="0,0,0,10">
+                        <Border x:Name="SessionCard"
+                                Background="{StaticResource PanelBackgroundBrush}"
+                                BorderBrush="{StaticResource BorderSoftBrush}"
+                                BorderThickness="1" CornerRadius="16"
+                                Padding="12" Margin="0,0,14,14"
+                                MinHeight="230"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform ScaleX="1" ScaleY="1" />
+                            </Border.RenderTransform>
                             <Border.Effect>
-                                <DropShadowEffect Color="#9DB4BE" BlurRadius="12" ShadowDepth="2" Opacity="0.1" />
+                                <DropShadowEffect x:Name="SessionCardShadow"
+                                                  Color="#9DB4BE" BlurRadius="12"
+                                                  ShadowDepth="2" Opacity="0.1" />
                             </Border.Effect>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="96" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
+                            <Border.Triggers>
+                                <EventTrigger RoutedEvent="MouseEnter">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="SessionCard"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                             To="1.015" Duration="0:0:0.14" />
+                                            <DoubleAnimation Storyboard.TargetName="SessionCard"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                             To="1.015" Duration="0:0:0.14" />
+                                            <DoubleAnimation Storyboard.TargetName="SessionCardShadow"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0.18" Duration="0:0:0.14" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                                <EventTrigger RoutedEvent="MouseLeave">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="SessionCard"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                             To="1" Duration="0:0:0.12" />
+                                            <DoubleAnimation Storyboard.TargetName="SessionCard"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                             To="1" Duration="0:0:0.12" />
+                                            <DoubleAnimation Storyboard.TargetName="SessionCardShadow"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0.1" Duration="0:0:0.12" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                            </Border.Triggers>
 
-                                <Border Width="82" Height="58" Background="{StaticResource SoftSurfaceBrush}" BorderBrush="{StaticResource BorderSoftBrush}" BorderThickness="1"
-                                        CornerRadius="12" ClipToBounds="True">
-                                    <Image Source="{Binding ThumbnailPath, Converter={StaticResource FileImageConverter}}" Stretch="UniformToFill" />
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <Border Background="{StaticResource SoftSurfaceBrush}"
+                                        BorderBrush="{StaticResource BorderSoftBrush}"
+                                        BorderThickness="1" CornerRadius="12"
+                                        ClipToBounds="True" MinHeight="132">
+                                    <Grid>
+                                        <Image Source="{Binding ThumbnailPath, Converter={StaticResource FileImageConverter}}"
+                                               Stretch="UniformToFill" />
+                                        <Button Content="&#xE74D;" ToolTip="Delete session"
+                                                Click="Delete_Click"
+                                                Style="{StaticResource IconButton}"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Top"
+                                                Margin="8" />
+                                    </Grid>
                                 </Border>
 
-                                <StackPanel Grid.Column="1" Margin="10,0,14,0">
-                                    <TextBox Text="{Binding Title, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                             FontSize="16" FontWeight="SemiBold" Padding="8,4" />
-                                    <TextBlock Foreground="{StaticResource TextSecondaryBrush}" Margin="2,6,0,0">
-                                        <Run Text="{Binding StepCount}" />
-                                        <Run Text=" steps  Updated " />
-                                        <Run Text="{Binding UpdatedAt, StringFormat={}{0:g}}" />
-                                    </TextBlock>
-                                </StackPanel>
+                                <Grid Grid.Row="1" Margin="0,12,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
 
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button Content="&#xE8E5;" ToolTip="Open session" Click="Open_Click"
-                                            Style="{StaticResource PrimaryIconButton}" Margin="0,0,6,0" />
-                                    <Button Content="&#xE8AC;" ToolTip="Rename session" Click="Rename_Click"
-                                            Style="{StaticResource IconButton}" Margin="0,0,6,0" />
-                                    <Button Content="&#xE74D;" ToolTip="Delete session" Click="Delete_Click"
-                                            Style="{StaticResource IconButton}" />
-                                </StackPanel>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}"
+                                                   FontSize="16" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Foreground="{StaticResource TextSecondaryBrush}" Margin="0,5,0,0">
+                                            <Run Text="{Binding StepCount}" />
+                                            <Run Text=" steps" />
+                                        </TextBlock>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="1" Content="&#xE8E5;"
+                                            ToolTip="Open session"
+                                            Click="Open_Click"
+                                            Style="{StaticResource PrimaryIconButton}"
+                                            Margin="10,0,0,0"
+                                            VerticalAlignment="Center" />
+                                </Grid>
                             </Grid>
                         </Border>
                     </DataTemplate>

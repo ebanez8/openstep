@@ -1,15 +1,18 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using OpenSteps.Core.Models;
 using WinForms = System.Windows.Forms;
 
 namespace OpenSteps.App;
 
-public partial class SessionPickerWindow : Window
+public partial class SessionPickerWindow : Window, INotifyPropertyChanged
 {
     private readonly MainWindow _controller;
+    private int _sessionGridColumns = 1;
 
     public SessionPickerWindow(MainWindow controller)
     {
@@ -23,6 +26,23 @@ public partial class SessionPickerWindow : Window
 
     public ObservableCollection<SessionSummary> Sessions { get; }
 
+    public int SessionGridColumns
+    {
+        get => _sessionGridColumns;
+        private set
+        {
+            if (_sessionGridColumns == value)
+            {
+                return;
+            }
+
+            _sessionGridColumns = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
     public async Task RefreshSessionsAsync()
     {
         Sessions.Clear();
@@ -31,6 +51,7 @@ public partial class SessionPickerWindow : Window
             Sessions.Add(session);
         }
 
+        SessionGridColumns = Math.Clamp(Sessions.Count, 1, 3);
         EmptyText.Visibility = Sessions.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -55,17 +76,6 @@ public partial class SessionPickerWindow : Window
         Close();
     }
 
-    private async void Rename_Click(object sender, RoutedEventArgs e)
-    {
-        if ((sender as FrameworkElement)?.DataContext is not SessionSummary summary)
-        {
-            return;
-        }
-
-        await _controller.RenameSavedSessionAsync(summary.Id, summary.Title);
-        await RefreshSessionsAsync();
-    }
-
     private async void Delete_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is not SessionSummary summary)
@@ -85,5 +95,10 @@ public partial class SessionPickerWindow : Window
 
         await _controller.DeleteSavedSessionAsync(summary.Id);
         await RefreshSessionsAsync();
+    }
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }
