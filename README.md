@@ -10,7 +10,7 @@ OpenSteps is a modern open-source Steps Recorder for Windows. It records desktop
 - Local-first recording with screenshots and click metadata.
 - Local saved sessions that can be reopened, renamed, edited, deleted, and exported again.
 - Global left-click capture across desktop apps.
-- Multi-monitor support that captures only the monitor containing the click by default.
+- Screenshot mode setting for full desktop capture or active-window-only capture.
 - UI Automation metadata for useful editable step titles.
 - Screenshot click highlights.
 - Manual screenshot editing with local pixelated redactions and optional red circles before export.
@@ -40,11 +40,11 @@ dotnet run --project src/OpenSteps.App
 
 OpenSteps records screenshots, click metadata, and privacy-safe keyboard activity locally. It does not upload anything, does not require an account, and does not include telemetry. The MVP detects that typing happened but does not record actual typed characters by default. Safe actions such as `Enter`, `Tab`, and shortcuts like `Ctrl+S` may be recorded as documentation steps. Password and secure fields are treated cautiously. Screenshots may contain sensitive information, so review captured steps before sharing or exporting.
 
-By default, screenshots are limited to the physical monitor containing the click. Full virtual desktop capture is still available as a legacy/debug mode from the home screen screenshot mode setting.
+The screenshot mode setting controls how much of the desktop is captured. Full desktop mode captures all visible monitors. Active window only mode captures the foreground window when possible. If active-window capture fails, OpenSteps falls back to full desktop capture so the step is not lost.
 
 OpenSteps saves recordings locally as sessions under `%LOCALAPPDATA%\OpenSteps\Sessions`. Each session has its own folder with `session.json` and local screenshots. Users can reopen previous recordings, edit them, rename them, delete them, and export Markdown again. Export copies images into the chosen export folder and uses relative Markdown links; it does not link directly to AppData paths.
 
-Screenshots may contain sensitive data. Before exporting or sharing a guide, review each screenshot and use manual redaction to hide private information. OpenSteps does not upload screenshots and does not automatically detect sensitive information.
+Screenshots may contain sensitive data. Before exporting or sharing a guide, review each screenshot and use manual redaction to hide private information. This is especially important after any fallback from active-window capture to full desktop capture. OpenSteps does not upload screenshots and does not automatically detect sensitive information.
 
 ## Roadmap
 

@@ -76,6 +76,34 @@ public sealed class RecordedStep
 
     public int? ScreenshotHeight { get; set; }
 
+    public ScreenshotMode RequestedScreenshotMode { get; set; } = ScreenshotMode.FullDesktop;
+
+    public ScreenshotMode ActualScreenshotMode { get; set; } = ScreenshotMode.FullDesktop;
+
+    public bool UsedScreenshotFallback { get; set; }
+
+    public string? ScreenshotError { get; set; }
+
+    public int? CapturedBoundsLeft { get; set; }
+
+    public int? CapturedBoundsTop { get; set; }
+
+    public int? CapturedBoundsRight { get; set; }
+
+    public int? CapturedBoundsBottom { get; set; }
+
+    public string? BoundsSource { get; set; }
+
+    public int? GlobalClickX { get; set; }
+
+    public int? GlobalClickY { get; set; }
+
+    public int? HighlightX { get; set; }
+
+    public int? HighlightY { get; set; }
+
+    public bool? HighlightWasInsideCapturedBounds { get; set; }
+
     [JsonIgnore]
     public IntPtr ActiveWindowHandle { get; set; }
 
@@ -161,7 +189,16 @@ public sealed class RecordedStep
                 $"Monitor bounds: {FormatMonitorBounds()}",
                 $"Monitor size: {FormatSize(MonitorWidth, MonitorHeight)}",
                 $"Monitor DPI: {FormatDpi()}",
-                $"Capture mode: {ScreenshotCaptureMode}",
+                $"Legacy capture mode: {ScreenshotCaptureMode}",
+                $"Requested screenshot mode: {RequestedScreenshotMode}",
+                $"Actual screenshot mode: {ActualScreenshotMode}",
+                $"Fallback used: {(UsedScreenshotFallback ? "yes" : "no")}",
+                $"Screenshot error: {ScreenshotError ?? "(none)"}",
+                $"Bounds source: {BoundsSource ?? "(unknown)"}",
+                $"Captured bounds: {FormatCaptureBounds()}",
+                $"Global click coordinates: {FormatPoint(GlobalClickX, GlobalClickY)}",
+                $"Highlight coordinates: {FormatPoint(HighlightX, HighlightY)}",
+                $"Highlight inside captured bounds: {FormatBool(HighlightWasInsideCapturedBounds)}",
                 $"Action type: {ActionType}",
                 $"Keyboard input detected: {(KeyboardInputDetected ? "yes" : "no")}",
                 $"Key count: {(KeyCount.HasValue ? KeyCount.Value.ToString() : "(not stored)")}",
@@ -242,6 +279,16 @@ public sealed class RecordedStep
             && MonitorBoundsRight.HasValue
             && MonitorBoundsBottom.HasValue
             ? $"left={MonitorBoundsLeft}, top={MonitorBoundsTop}, right={MonitorBoundsRight}, bottom={MonitorBoundsBottom}"
+            : "(unknown)";
+    }
+
+    private string FormatCaptureBounds()
+    {
+        return CapturedBoundsLeft.HasValue
+            && CapturedBoundsTop.HasValue
+            && CapturedBoundsRight.HasValue
+            && CapturedBoundsBottom.HasValue
+            ? $"left={CapturedBoundsLeft}, top={CapturedBoundsTop}, right={CapturedBoundsRight}, bottom={CapturedBoundsBottom}"
             : "(unknown)";
     }
 

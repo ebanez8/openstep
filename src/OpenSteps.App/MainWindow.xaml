@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="OpenSteps" Height="82" Width="560" MinHeight="82" MinWidth="560"
+        Title="OpenSteps" Height="82" Width="760" MinHeight="82" MinWidth="760"
         WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True"
         Background="Transparent" Topmost="True">
     <Window.Resources>
@@ -81,7 +81,18 @@
                             ToolTip="Move" PreviewMouseLeftButtonDown="MoveControl_MouseLeftButtonDown"
                             Style="{StaticResource GhostPillIconButton}" Cursor="SizeAll" />
                     <TextBlock Text="OpenSteps" Foreground="#1E2B35" FontWeight="SemiBold"
-                               VerticalAlignment="Center" Margin="6,0,24,0" />
+                               VerticalAlignment="Center" Margin="6,0,18,0" />
+
+                    <TextBlock Text="Screenshot mode" Foreground="#52636B"
+                               VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <ComboBox ItemsSource="{Binding ScreenshotModeOptions}"
+                              DisplayMemberPath="DisplayName"
+                              SelectedValuePath="Mode"
+                              SelectedValue="{Binding ScreenshotMode, Mode=TwoWay}"
+                              Width="136" Height="34"
+                              VerticalContentAlignment="Center"
+                              Margin="0,0,14,0"
+                              ToolTip="Full desktop captures all visible monitors. Active window only captures the foreground window when possible and falls back to full desktop if needed." />
 
                     <Button x:Name="StartRecordingButton" Content="&#xE768;" FontFamily="Segoe MDL2 Assets"
                             ToolTip="Start recording" Click="StartRecording_Click"

@@ -14,6 +14,8 @@ using WinForms = System.Windows.Forms;
 
 namespace OpenSteps.App;
 
+public sealed record ScreenshotModeOption(string DisplayName, ScreenshotMode Mode);
+
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
     private readonly ActiveWindowService _activeWindowService = new();
@@ -25,6 +27,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly StepTitleGenerator _titleGenerator = new();
     private readonly MarkdownExporter _markdownExporter = new();
     private readonly SessionStore _sessionStore = new();
+    private readonly SettingsService _settingsService = new();
     private readonly SemaphoreSlim _captureLock = new(1, 1);
     private readonly DispatcherTimer _typingTimer;
     private readonly DispatcherTimer _recordingStatusTimer;
@@ -39,14 +42,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private bool _isRecording;
     private bool _isPaused;
     private DateTimeOffset _recordingStartedAt;
-    private ScreenshotCaptureMode _screenshotCaptureMode = ScreenshotCaptureMode.MonitorContainingClick;
+    private AppSettings _settings = new();
+    private ScreenshotMode _screenshotMode = ScreenshotMode.FullDesktop;
+    private bool _loadingSettings;
 
     public MainWindow()
     {
         _screenshotService = new ScreenshotService(_monitorService);
         InitializeComponent();
         DataContext = this;
-        Loaded += (_, _) => PositionControllerBottomCenter();
+        Loaded += async (_, _) =>
+        {
+            PositionControllerBottomCenter();
+            await LoadSettingsAsync();
+        };
         _typingTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(850) };
         _typingTimer.Tick += async (_, _) => await FinalizePendingTypingAsync();
         _recordingStatusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
@@ -60,28 +69,59 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     public ObservableCollection<RecordedStep> Steps { get; } = [];
 
-    public ScreenshotCaptureMode[] ScreenshotCaptureModes { get; } =
+    public ScreenshotModeOption[] ScreenshotModeOptions { get; } =
     [
-        ScreenshotCaptureMode.MonitorContainingClick,
-        ScreenshotCaptureMode.FullVirtualDesktop
+        new("Full desktop", ScreenshotMode.FullDesktop),
+        new("Active window only", ScreenshotMode.ActiveWindow)
     ];
 
-    public ScreenshotCaptureMode ScreenshotCaptureMode
+    public ScreenshotMode ScreenshotMode
     {
-        get => _screenshotCaptureMode;
+        get => _screenshotMode;
         set
         {
-            if (_screenshotCaptureMode == value)
+            if (_screenshotMode == value)
             {
                 return;
             }
 
-            _screenshotCaptureMode = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ScreenshotCaptureMode)));
+            _screenshotMode = value;
+            _settings.ScreenshotMode = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ScreenshotMode)));
+            if (!_loadingSettings)
+            {
+                _ = SaveSettingsAsync();
+            }
         }
     }
 
     internal string SessionsRootDirectory => _sessionStore.RootDirectory;
+
+    private async Task LoadSettingsAsync()
+    {
+        _loadingSettings = true;
+        try
+        {
+            _settings = await _settingsService.LoadAsync();
+            ScreenshotMode = _settings.ScreenshotMode;
+        }
+        finally
+        {
+            _loadingSettings = false;
+        }
+    }
+
+    private async Task SaveSettingsAsync()
+    {
+        try
+        {
+            await _settingsService.SaveAsync(_settings);
+        }
+        catch
+        {
+            // Settings persistence should not block recording.
+        }
+    }
 
     private async void StartRecording_Click(object sender, RoutedEventArgs e)
     {
@@ -129,6 +169,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async Task StartRecordingAsync()
     {
+        await LoadSettingsAsync();
         EnsureSession();
         StopHooks();
         _isRecording = true;
@@ -253,7 +294,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
             try
             {
-                var screenshot = await _screenshotService.CaptureAsync(GetSessionImagesDirectory(), step.Index, x, y, ScreenshotCaptureMode);
+                var screenshot = await _screenshotService.CaptureAsync(GetSessionImagesDirectory(), step.Index, x, y, ScreenshotMode);
                 ApplyScreenshotResult(step, screenshot);
                 step.ScreenshotCaptured = true;
             }
@@ -450,7 +491,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         try
         {
-            var screenshot = await _screenshotService.CaptureAsync(GetSessionImagesDirectory(), $"step-{step.Index:000}-{suffix}.png", captureX, captureY, ScreenshotCaptureMode, drawHighlight);
+            var screenshot = await _screenshotService.CaptureAsync(GetSessionImagesDirectory(), $"step-{step.Index:000}-{suffix}.png", captureX, captureY, ScreenshotMode, drawHighlight);
             ApplyScreenshotResult(step, screenshot);
             step.ScreenshotCaptured = true;
         }
@@ -583,6 +624,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     internal async Task DeleteSavedSessionAsync(Guid sessionId)
     {
         await _sessionStore.DeleteSessionAsync(sessionId);
+        if (_session.Id == sessionId)
+        {
+            StopHooks();
+            _isRecording = false;
+            _isPaused = false;
+            _recordingStatusTimer.Stop();
+            _typingTimer.Stop();
+            _pendingTypingStep = null;
+            _pendingTypingKeyCount = 0;
+            ResetSession();
+            RefreshRecordingStatus();
+        }
     }
 
     internal void SessionPickerClosed(SessionPickerWindow pickerWindow)
@@ -1037,21 +1090,35 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         step.EditedScreenshotPath = null;
         step.Redactions.Clear();
         step.ScreenshotCaptureMode = screenshot.CaptureMode;
+        step.RequestedScreenshotMode = screenshot.RequestedScreenshotMode;
+        step.ActualScreenshotMode = screenshot.ActualScreenshotMode;
+        step.UsedScreenshotFallback = screenshot.UsedScreenshotFallback;
+        step.ScreenshotError = screenshot.ScreenshotError;
+        step.CapturedBoundsLeft = screenshot.CapturedBounds?.X;
+        step.CapturedBoundsTop = screenshot.CapturedBounds?.Y;
+        step.CapturedBoundsRight = screenshot.CapturedBounds is { } capturedBounds ? capturedBounds.X + capturedBounds.Width : null;
+        step.CapturedBoundsBottom = screenshot.CapturedBounds is { } capturedBounds2 ? capturedBounds2.Y + capturedBounds2.Height : null;
+        step.BoundsSource = screenshot.BoundsSource;
+        step.GlobalClickX = screenshot.GlobalClickX;
+        step.GlobalClickY = screenshot.GlobalClickY;
+        step.HighlightX = screenshot.HighlightX;
+        step.HighlightY = screenshot.HighlightY;
+        step.HighlightWasInsideCapturedBounds = screenshot.HighlightWasInsideCapturedBounds;
         step.LocalClickX = screenshot.LocalClickX;
         step.LocalClickY = screenshot.LocalClickY;
         step.ScreenshotWidth = screenshot.ScreenshotWidth;
         step.ScreenshotHeight = screenshot.ScreenshotHeight;
-        step.MonitorDeviceName = screenshot.Monitor.DeviceName;
-        step.MonitorIndex = screenshot.Monitor.Index;
-        step.MonitorBoundsLeft = screenshot.Monitor.BoundsLeft;
-        step.MonitorBoundsTop = screenshot.Monitor.BoundsTop;
-        step.MonitorBoundsRight = screenshot.Monitor.BoundsRight;
-        step.MonitorBoundsBottom = screenshot.Monitor.BoundsBottom;
-        step.MonitorWidth = screenshot.Monitor.Width;
-        step.MonitorHeight = screenshot.Monitor.Height;
-        step.IsPrimaryMonitor = screenshot.Monitor.IsPrimary;
-        step.MonitorDpiX = screenshot.Monitor.DpiX;
-        step.MonitorDpiY = screenshot.Monitor.DpiY;
+        step.MonitorDeviceName = screenshot.Monitor?.DeviceName;
+        step.MonitorIndex = screenshot.Monitor?.Index;
+        step.MonitorBoundsLeft = screenshot.Monitor?.BoundsLeft;
+        step.MonitorBoundsTop = screenshot.Monitor?.BoundsTop;
+        step.MonitorBoundsRight = screenshot.Monitor?.BoundsRight;
+        step.MonitorBoundsBottom = screenshot.Monitor?.BoundsBottom;
+        step.MonitorWidth = screenshot.Monitor?.Width;
+        step.MonitorHeight = screenshot.Monitor?.Height;
+        step.IsPrimaryMonitor = screenshot.Monitor?.IsPrimary;
+        step.MonitorDpiX = screenshot.Monitor?.DpiX;
+        step.MonitorDpiY = screenshot.Monitor?.DpiY;
     }
 
     private static string GetEditedScreenshotPath(RecordedStep step)

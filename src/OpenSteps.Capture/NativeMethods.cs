@@ -12,6 +12,7 @@ internal static partial class NativeMethods
     internal const uint MONITOR_DEFAULTTONEAREST = 0x00000002;
     internal const uint MONITORINFOF_PRIMARY = 0x00000001;
     internal const int MDT_EFFECTIVE_DPI = 0;
+    internal const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
 
     internal delegate IntPtr LowLevelHookProc(int nCode, IntPtr wParam, IntPtr lParam);
 
@@ -60,6 +61,9 @@ internal static partial class NativeMethods
 
     [DllImport("Shcore.dll", SetLastError = true)]
     internal static extern int GetDpiForMonitor(IntPtr monitorHandle, int dpiType, out uint dpiX, out uint dpiY);
+
+    [DllImport("dwmapi.dll", PreserveSig = true)]
+    internal static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out RECT pvAttribute, int cbAttribute);
 
     internal delegate bool MonitorEnumProc(IntPtr monitorHandle, IntPtr hdcMonitor, ref RECT monitorRect, IntPtr data);
 
