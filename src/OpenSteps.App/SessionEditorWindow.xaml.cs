@@ -38,7 +38,6 @@ public partial class SessionEditorWindow : Window
 
     public void SetSummary(string summary)
     {
-        SessionSummaryText.Text = summary;
     }
 
     public void RefreshSteps()
@@ -91,7 +90,6 @@ public partial class SessionEditorWindow : Window
         if (!_updatingTitle)
         {
             _controller.SetSessionTitleFromEditor(SessionTitleBox.Text);
-            ScheduleAutosave();
         }
     }
 

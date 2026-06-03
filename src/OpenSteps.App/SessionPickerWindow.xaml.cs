@@ -34,11 +34,6 @@ public partial class SessionPickerWindow : Window
         EmptyText.Visibility = Sessions.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private async void Refresh_Click(object sender, RoutedEventArgs e)
-    {
-        await RefreshSessionsAsync();
-    }
-
     private void OpenFolder_Click(object sender, RoutedEventArgs e)
     {
         Directory.CreateDirectory(_controller.SessionsRootDirectory);

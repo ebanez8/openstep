@@ -14,16 +14,30 @@
             <Border.Effect>
                 <DropShadowEffect Color="#9DB4BE" BlurRadius="16" ShadowDepth="2" Opacity="0.14" />
             </Border.Effect>
-            <DockPanel>
-                <TextBlock Text="Saved Sessions" FontSize="22" FontWeight="SemiBold"
-                           Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                    <Button Content="&#xE8B7;" ToolTip="Open sessions folder" Click="OpenFolder_Click"
-                            Style="{StaticResource IconButton}" Margin="0,0,8,0" />
-                    <Button Content="&#xE72C;" ToolTip="Refresh" Click="Refresh_Click"
-                            Style="{StaticResource IconButton}" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Saved Sessions" FontSize="22" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}" />
+                    <TextBlock Text="Open a previous guide or browse the saved session files."
+                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0" />
                 </StackPanel>
-            </DockPanel>
+
+                <Button Grid.Column="1" Click="OpenFolder_Click"
+                        ToolTip="Open sessions folder"
+                        Style="{StaticResource PrimaryActionButton}"
+                        Padding="14,0" Height="34"
+                        VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="14" VerticalAlignment="Center" />
+                        <TextBlock Text="Files" Margin="8,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </Grid>
         </Border>
 
         <Grid Margin="18">
