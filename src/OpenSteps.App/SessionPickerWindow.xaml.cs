@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using OpenSteps.Core.Models;
 using WinForms = System.Windows.Forms;
 
@@ -65,9 +67,19 @@ public partial class SessionPickerWindow : Window, INotifyPropertyChanged
         });
     }
 
-    private async void Open_Click(object sender, RoutedEventArgs e)
+    private async void SessionCard_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if ((sender as FrameworkElement)?.DataContext is not SessionSummary summary)
+        if (FindAncestor<System.Windows.Controls.Button>(e.OriginalSource as DependencyObject) is not null)
+        {
+            return;
+        }
+
+        await OpenSessionFromElementAsync(sender as FrameworkElement);
+    }
+
+    private async Task OpenSessionFromElementAsync(FrameworkElement? element)
+    {
+        if (element?.DataContext is not SessionSummary summary)
         {
             return;
         }
@@ -100,5 +112,20 @@ public partial class SessionPickerWindow : Window, INotifyPropertyChanged
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    private static T? FindAncestor<T>(DependencyObject? current) where T : DependencyObject
+    {
+        while (current is not null)
+        {
+            if (current is T match)
+            {
+                return match;
+            }
+
+            current = VisualTreeHelper.GetParent(current);
+        }
+
+        return null;
     }
 }
