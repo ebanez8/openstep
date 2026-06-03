@@ -4,20 +4,22 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="OpenSteps" Height="82" Width="800" MinHeight="82" MinWidth="800"
+        Title="OpenSteps" Height="76" Width="780" MinHeight="76" MinWidth="780"
         WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True"
         Background="Transparent" Topmost="True">
     <Window.Resources>
+        <!--  Pill-shaped controls scoped to the floating recorder bar.  -->
         <Style x:Key="PillIconButton" TargetType="Button">
-            <Setter Property="Width" Value="54" />
+            <Setter Property="Width" Value="40" />
             <Setter Property="Height" Value="36" />
-            <Setter Property="FontSize" Value="17" />
+            <Setter Property="FontSize" Value="14" />
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
-            <Setter Property="Foreground" Value="#47545B" />
-            <Setter Property="Background" Value="#EDF6F9" />
-            <Setter Property="BorderBrush" Value="#DDE9EE" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -25,19 +27,20 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="12"
+                                CornerRadius="8"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"
                                               RecognizesAccessKey="True" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="#E4EEF3" />
-                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#D4E1E8" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource SoftSurfaceBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="#DCE9EF" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource PressedSurfaceBrush}" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.45" />
@@ -49,75 +52,186 @@
         </Style>
 
         <Style x:Key="PrimaryPillIconButton" TargetType="Button" BasedOn="{StaticResource PillIconButton}">
-            <Setter Property="Foreground" Value="#33414A" />
-            <Setter Property="Background" Value="#DCE9EF" />
-            <Setter Property="BorderBrush" Value="#C9D9E1" />
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#D6E5EC" />
-                    <Setter Property="BorderBrush" Value="#C2D4DD" />
-                </Trigger>
-            </Style.Triggers>
+            <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource TextInverseBrush}" />
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource AccentHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource AccentPressedBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
-        <Style x:Key="GhostPillIconButton" TargetType="Button" BasedOn="{StaticResource PillIconButton}">
-            <Setter Property="Width" Value="44" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="Foreground" Value="#63727B" />
+        <Style x:Key="DangerPillIconButton" TargetType="Button" BasedOn="{StaticResource PrimaryPillIconButton}">
+            <Setter Property="Background" Value="{StaticResource RecordingBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#C42D3D" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#A52532" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Divider" TargetType="Rectangle">
+            <Setter Property="Width" Value="1" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Fill" Value="{StaticResource BorderSoftBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="10,0" />
+        </Style>
+
+        <!--  Compact combo for the floating bar.  -->
+        <Style x:Key="PillComboBox" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Height" Value="34" />
         </Style>
     </Window.Resources>
 
-    <Grid>
-        <Grid x:Name="HomePanel" Margin="12">
-            <Border Background="#EEF8FB" BorderBrush="#D9E8EE"
-                    BorderThickness="1" CornerRadius="30" Padding="12,8"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
-                <Border.Effect>
-                    <DropShadowEffect Color="#8FA7B2" BlurRadius="26" ShadowDepth="5" Opacity="0.34" />
-                </Border.Effect>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="&#xE700;" FontFamily="Segoe MDL2 Assets"
-                            ToolTip="Move" PreviewMouseLeftButtonDown="MoveControl_MouseLeftButtonDown"
-                            Style="{StaticResource GhostPillIconButton}" Cursor="SizeAll" />
-                    <TextBlock Text="OpenSteps" Foreground="#1E2B35" FontWeight="SemiBold"
-                               VerticalAlignment="Center" Margin="6,0,18,0" />
+    <Grid Margin="12">
+        <Border Background="{StaticResource PanelBackgroundBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="14"
+                Padding="10,8">
+            <Border.Effect>
+                <DropShadowEffect Color="#1F2937" BlurRadius="28" ShadowDepth="4" Opacity="0.18" />
+            </Border.Effect>
 
-                    <TextBlock Text="Screenshot mode" Foreground="#52636B"
-                               VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <ComboBox ItemsSource="{Binding ScreenshotModeOptions}"
-                              DisplayMemberPath="DisplayName"
-                              SelectedValuePath="Mode"
-                              SelectedValue="{Binding ScreenshotMode, Mode=TwoWay}"
-                              Width="158" Height="36"
-                              VerticalContentAlignment="Center"
-                              Margin="0,0,14,0"
-                              ToolTip="Full desktop captures all visible monitors. Active window only captures the foreground window when possible and falls back to full desktop if needed." />
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
 
-                    <Button x:Name="StartRecordingButton" Content="&#xE768;" FontFamily="Segoe MDL2 Assets"
-                            ToolTip="Start recording" Click="StartRecording_Click"
-                            Style="{StaticResource PrimaryPillIconButton}" />
-                    <Button x:Name="PauseRecordingButton" Content="&#xE769;" FontFamily="Segoe MDL2 Assets"
-                            ToolTip="Pause recording" Click="PauseRecording_Click"
-                            Style="{StaticResource PrimaryPillIconButton}" Margin="10,0,0,0"
-                            Visibility="Collapsed" />
-                    <Button x:Name="StopRecordingButton" Content="&#xE71A;" FontFamily="Segoe MDL2 Assets"
-                            ToolTip="Stop recording" Click="StopRecording_Click"
-                            Style="{StaticResource PrimaryPillIconButton}" Margin="10,0,0,0"
-                            Visibility="Collapsed" />
-                    <Button Content="&#xE722;" FontFamily="Segoe MDL2 Assets"
-                            ToolTip="Capture test step" Click="CaptureTestStep_Click"
-                            Style="{StaticResource PillIconButton}" Margin="10,0,0,0" />
-                    <Button Content="&#xE8B7;" FontFamily="Segoe MDL2 Assets"
-                            ToolTip="Saved sessions" Click="OpenPreviousSession_Click"
-                            Style="{StaticResource PillIconButton}" Margin="10,0,0,0" />
-                    <TextBlock x:Name="RecordingStatusText" Foreground="#52636B"
-                               VerticalAlignment="Center" Margin="16,0,14,0" />
-                    <Button Content="&#xE711;" FontFamily="Segoe MDL2 Assets"
-                            ToolTip="Close" Click="Close_Click"
-                            Style="{StaticResource GhostPillIconButton}" />
+                <!--  Brand + drag handle  -->
+                <Button Content="&#xE700;"
+                        ToolTip="Drag to move"
+                        PreviewMouseLeftButtonDown="MoveControl_MouseLeftButtonDown"
+                        Style="{StaticResource PillIconButton}"
+                        Cursor="SizeAll" />
+                <TextBlock Text="OpenSteps"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           FontWeight="SemiBold"
+                           FontSize="13.5"
+                           VerticalAlignment="Center"
+                           Margin="4,0,0,0" />
+
+                <Rectangle Style="{StaticResource Divider}" Margin="14,0,12,0" />
+
+                <!--  Capture mode  -->
+                <TextBlock Text="Capture"
+                           Foreground="{StaticResource TextMutedBrush}"
+                           FontSize="12"
+                           VerticalAlignment="Center"
+                           Margin="0,0,8,0" />
+                <ComboBox ItemsSource="{Binding ScreenshotModeOptions}"
+                          DisplayMemberPath="DisplayName"
+                          SelectedValuePath="Mode"
+                          SelectedValue="{Binding ScreenshotMode, Mode=TwoWay}"
+                          Width="158"
+                          Style="{StaticResource PillComboBox}"
+                          ToolTip="Full desktop captures all visible monitors. Active window only captures the foreground window when possible and falls back to full desktop if needed." />
+
+                <Rectangle Style="{StaticResource Divider}" />
+
+                <!--  Record / Pause / Stop / Test  -->
+                <Button x:Name="StartRecordingButton"
+                        Content="&#xE7C8;"
+                        ToolTip="Start recording"
+                        Click="StartRecording_Click"
+                        Style="{StaticResource PrimaryPillIconButton}" />
+                <Button x:Name="PauseRecordingButton"
+                        Content="&#xE769;"
+                        ToolTip="Pause recording"
+                        Click="PauseRecording_Click"
+                        Style="{StaticResource PrimaryPillIconButton}"
+                        Margin="8,0,0,0"
+                        Visibility="Collapsed" />
+                <Button x:Name="StopRecordingButton"
+                        Content="&#xE71A;"
+                        ToolTip="Stop recording"
+                        Click="StopRecording_Click"
+                        Style="{StaticResource DangerPillIconButton}"
+                        Margin="8,0,0,0"
+                        Visibility="Collapsed" />
+                <Button Content="&#xE722;"
+                        ToolTip="Capture test step"
+                        Click="CaptureTestStep_Click"
+                        Style="{StaticResource PillIconButton}"
+                        Margin="8,0,0,0" />
+                <Button Content="&#xE8B7;"
+                        ToolTip="Saved guides"
+                        Click="OpenPreviousSession_Click"
+                        Style="{StaticResource PillIconButton}"
+                        Margin="2,0,0,0" />
+
+                <!--  Status  -->
+                <StackPanel x:Name="StatusPanel"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            MinWidth="150"
+                            Margin="14,0,4,0">
+                    <Ellipse x:Name="RecordingDot"
+                             Width="9" Height="9"
+                             Fill="{StaticResource RecordingBrush}"
+                             VerticalAlignment="Center"
+                             Margin="0,0,8,0"
+                             Visibility="Collapsed">
+                        <Ellipse.Triggers>
+                            <EventTrigger RoutedEvent="Ellipse.Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                         From="1.0" To="0.35"
+                                                         Duration="0:0:0.9"
+                                                         AutoReverse="True" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Ellipse.Triggers>
+                    </Ellipse>
+                    <TextBlock x:Name="RecordingStatusText"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               FontSize="12.5"
+                               VerticalAlignment="Center" />
                 </StackPanel>
-            </Border>
-        </Grid>
+
+                <Rectangle Style="{StaticResource Divider}" Margin="4,0,8,0" />
+
+                <Button Content="&#xE711;"
+                        ToolTip="Close"
+                        Click="Close_Click"
+                        Style="{StaticResource PillIconButton}" />
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

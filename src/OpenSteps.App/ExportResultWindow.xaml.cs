@@ -18,6 +18,9 @@ public partial class ExportResultWindow : Window
         WarningsTextBox.Text = result.Warnings.Count == 0
             ? "No warnings."
             : string.Join(Environment.NewLine, result.Warnings);
+        WarningsCount.Text = result.Warnings.Count == 0
+            ? string.Empty
+            : $"({result.Warnings.Count})";
     }
 
     private void OpenFolder_Click(object sender, RoutedEventArgs e)

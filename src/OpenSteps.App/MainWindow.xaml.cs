@@ -1178,11 +1178,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             var elapsed = DateTimeOffset.Now - _recordingStartedAt;
             var state = _isPaused ? "Paused" : "Recording";
-            RecordingStatusText.Text = $"{state}  {elapsed:mm\\:ss}  {Steps.Count}";
+            var stepLabel = Steps.Count == 1 ? "step" : "steps";
+            RecordingStatusText.Text = $"{state}  ·  {elapsed:mm\\:ss}  ·  {Steps.Count} {stepLabel}";
+            RecordingDot.Visibility = _isPaused ? Visibility.Collapsed : Visibility.Visible;
         }
         else
         {
             RecordingStatusText.Text = string.Empty;
+            RecordingDot.Visibility = Visibility.Collapsed;
         }
     }
 

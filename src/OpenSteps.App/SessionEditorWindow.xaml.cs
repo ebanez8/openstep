@@ -43,6 +43,9 @@ public partial class SessionEditorWindow : Window
     public void RefreshSteps()
     {
         StepsList.Items.Refresh();
+        var hasSteps = _controller.Steps.Count > 0;
+        EmptyState.Visibility = hasSteps ? Visibility.Collapsed : Visibility.Visible;
+        StepsList.Visibility = hasSteps ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private async void BackToRecorder_Click(object sender, RoutedEventArgs e)
