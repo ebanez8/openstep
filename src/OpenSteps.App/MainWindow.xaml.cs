@@ -782,6 +782,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         await SaveSessionAsync(showMessage: false);
         _editorWindow?.Hide();
+        ResetSession();
         Show();
         Activate();
         RefreshRecordingStatus();
@@ -813,7 +814,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void EnsureSession()
     {
-        if (!string.IsNullOrWhiteSpace(_session.OutputDirectory))
+        var sessionDirectory = string.IsNullOrWhiteSpace(_session.SessionDirectory)
+            ? _session.OutputDirectory
+            : _session.SessionDirectory;
+        if (!string.IsNullOrWhiteSpace(sessionDirectory) && Directory.Exists(sessionDirectory))
         {
             return;
         }

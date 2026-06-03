@@ -50,7 +50,7 @@
             <ItemsControl x:Name="StepsList" ItemsSource="{Binding Steps}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Grid Margin="0,0,0,16">
+                        <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="78" />
                                 <ColumnDefinition Width="*" />
@@ -78,7 +78,7 @@
                             </Grid>
 
                             <Border Background="{StaticResource PanelBackgroundBrush}" BorderBrush="{StaticResource BorderSoftBrush}" BorderThickness="1"
-                                    CornerRadius="16" Padding="20"
+                                    CornerRadius="16" Padding="20" Margin="0,0,0,16"
                                     Grid.Column="1">
                                 <Border.Effect>
                                     <DropShadowEffect Color="#9DB4BE" BlurRadius="15" ShadowDepth="2" Opacity="0.11" />
