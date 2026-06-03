@@ -45,6 +45,11 @@ public partial class SessionEditorWindow : Window
         StepsList.Items.Refresh();
     }
 
+    private async void BackToRecorder_Click(object sender, RoutedEventArgs e)
+    {
+        await _controller.ReturnToRecorderFromEditorAsync();
+    }
+
     private async void RecordMore_Click(object sender, RoutedEventArgs e)
     {
         await _controller.StartRecordingFromEditorAsync();

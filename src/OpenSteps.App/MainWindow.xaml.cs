@@ -725,6 +725,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _session.Title = title;
     }
 
+    internal async Task ReturnToRecorderFromEditorAsync()
+    {
+        await SaveSessionAsync(showMessage: false);
+        _editorWindow?.Hide();
+        Show();
+        Activate();
+        RefreshRecordingStatus();
+    }
+
     internal async Task StartRecordingFromEditorAsync()
     {
         _editorWindow?.Hide();

@@ -33,8 +33,11 @@
                              TextChanged="SessionTitleBox_TextChanged" />
                 </DockPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Recorder" ToolTip="Back to recorder" Click="BackToRecorder_Click"
+                            Padding="16,0" Height="34"
+                            Style="{StaticResource PrimaryActionButton}" />
                     <Button Content="&#xE768;" ToolTip="Record more" Click="RecordMore_Click"
-                            Style="{StaticResource IconButton}" />
+                            Style="{StaticResource IconButton}" Margin="10,0,0,0" />
                     <Button Content="&#xE74E;" ToolTip="Save" Click="SaveSession_Click"
                             Style="{StaticResource IconButton}" Margin="10,0,0,0" />
                     <Button Content="Export" Click="ExportMarkdown_Click"
@@ -48,8 +51,36 @@
             <ItemsControl x:Name="StepsList" ItemsSource="{Binding Steps}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="78" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Grid Grid.Column="0">
+                                <Rectangle Width="2"
+                                           Fill="{StaticResource BorderSoftBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Stretch" />
+                                <Border Width="42" Height="42"
+                                        Background="{StaticResource SoftSurfaceBrush}"
+                                        BorderBrush="{StaticResource BorderSoftBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="21"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Top"
+                                        Margin="0,20,0,0">
+                                    <TextBlock Text="{Binding Index}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource TextPrimaryBrush}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                                </Border>
+                            </Grid>
+
                             <Border Background="{StaticResource PanelBackgroundBrush}" BorderBrush="{StaticResource BorderSoftBrush}" BorderThickness="1"
-                                    CornerRadius="16" Margin="0,0,0,16" Padding="20">
+                                    CornerRadius="16" Padding="20"
+                                    Grid.Column="1">
                                 <Border.Effect>
                                     <DropShadowEffect Color="#9DB4BE" BlurRadius="15" ShadowDepth="2" Opacity="0.11" />
                                 </Border.Effect>
@@ -130,6 +161,7 @@
                                 </Grid>
                             </Grid>
                         </Border>
+                        </Grid>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
