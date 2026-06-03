@@ -65,16 +65,6 @@ public partial class SessionEditorWindow : Window
         await _controller.ExportMarkdownFromEditorAsync();
     }
 
-    private async void PreviewMarkdown_Click(object sender, RoutedEventArgs e)
-    {
-        await _controller.PreviewMarkdownFromEditorAsync();
-    }
-
-    private async void AddManualStep_Click(object sender, RoutedEventArgs e)
-    {
-        await _controller.AddManualStepFromEditorAsync();
-    }
-
     private void ViewScreenshot_Click(object sender, RoutedEventArgs e)
     {
         _controller.ViewScreenshotFromEditor(sender);

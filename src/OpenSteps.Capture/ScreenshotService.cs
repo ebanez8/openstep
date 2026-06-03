@@ -43,10 +43,36 @@ public sealed class ScreenshotService
 
     public Task<ScreenshotCaptureResult> CaptureAsync(
         string sessionDirectory,
+        int stepIndex,
+        int clickX,
+        int clickY,
+        ScreenshotMode requestedMode,
+        IntPtr targetHwnd,
+        bool drawHighlight = true,
+        CancellationToken cancellationToken = default)
+    {
+        return CaptureAsync(sessionDirectory, $"step-{stepIndex:000}.png", clickX, clickY, requestedMode, targetHwnd, drawHighlight, cancellationToken);
+    }
+
+    public Task<ScreenshotCaptureResult> CaptureAsync(
+        string sessionDirectory,
         string fileName,
         int clickX,
         int clickY,
         ScreenshotMode requestedMode,
+        bool drawHighlight = true,
+        CancellationToken cancellationToken = default)
+    {
+        return CaptureAsync(sessionDirectory, fileName, clickX, clickY, requestedMode, IntPtr.Zero, drawHighlight, cancellationToken);
+    }
+
+    public Task<ScreenshotCaptureResult> CaptureAsync(
+        string sessionDirectory,
+        string fileName,
+        int clickX,
+        int clickY,
+        ScreenshotMode requestedMode,
+        IntPtr targetHwnd,
         bool drawHighlight = true,
         CancellationToken cancellationToken = default)
     {
@@ -59,7 +85,7 @@ public sealed class ScreenshotService
             {
                 try
                 {
-                    return CaptureActiveWindow(sessionDirectory, fileName, clickX, clickY, drawHighlight, cancellationToken);
+                    return CaptureActiveWindow(sessionDirectory, fileName, clickX, clickY, targetHwnd, drawHighlight, cancellationToken);
                 }
                 catch (Exception ex) when (ex is InvalidOperationException or IOException or System.Runtime.InteropServices.ExternalException or ArgumentException)
                 {
@@ -106,12 +132,15 @@ public sealed class ScreenshotService
         string fileName,
         int clickX,
         int clickY,
+        IntPtr targetHwnd,
         bool drawHighlight,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var bounds = _windowBoundsService.GetForegroundWindowBounds();
+        var bounds = targetHwnd == IntPtr.Zero
+            ? _windowBoundsService.GetForegroundWindowBounds()
+            : _windowBoundsService.GetWindowBounds(targetHwnd);
         var captureBounds = Rectangle.FromLTRB(bounds.Left, bounds.Top, bounds.Right, bounds.Bottom);
         var (highlightX, highlightY) = ScreenshotCoordinateMapper.ToCapturedPoint(clickX, clickY, bounds.Left, bounds.Top);
         var highlightInside = ScreenshotCoordinateMapper.IsInsideCapturedBounds(highlightX, highlightY, bounds.Width, bounds.Height);

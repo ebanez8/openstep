@@ -8,6 +8,16 @@ public sealed class ActiveWindowService
     public ActiveWindowInfo Capture()
     {
         var handle = NativeMethods.GetForegroundWindow();
+        return Capture(handle);
+    }
+
+    public IntPtr GetForegroundWindowHandle()
+    {
+        return NativeMethods.GetForegroundWindow();
+    }
+
+    public ActiveWindowInfo Capture(IntPtr handle)
+    {
         if (handle == IntPtr.Zero)
         {
             return new ActiveWindowInfo(IntPtr.Zero, null, null, null, null);

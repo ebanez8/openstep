@@ -18,6 +18,27 @@ Use this checklist before demoing OpenSteps.
 12. If the main OpenSteps window is visible while recording, click it and confirm those clicks are excluded.
 13. Click **Stop**.
 
+## Taskbar And OpenSteps Click Filtering
+
+1. Start OpenSteps recording.
+2. Leave OpenSteps visible or foreground.
+3. Click a Notepad icon on the Windows taskbar to open or maximize Notepad.
+4. Confirm no new recorded step is created for the taskbar click.
+5. Confirm no screenshot of OpenSteps is created.
+6. Open the editor and confirm **Skipped capture events** shows a skipped taskbar/shell click.
+7. Click inside Notepad.
+8. Confirm that click records normally.
+9. Open Notepad and File Explorer.
+10. Start recording and click the File Explorer taskbar icon.
+11. Confirm the taskbar click is skipped and the next click inside File Explorer records normally.
+12. Put Chrome or Notepad visible behind OpenSteps.
+13. Start recording and click directly inside the background app window, not the taskbar.
+14. Confirm the step records the clicked app/window, not OpenSteps.
+15. With active-window screenshot mode enabled, confirm the screenshot captures the clicked app.
+16. Start recording and click Pause, Resume, or Stop on the OpenSteps toolbar.
+17. Confirm toolbar clicks are skipped and no steps are created from toolbar clicks.
+18. If available, repeat the taskbar switch test from a secondary monitor taskbar.
+
 ## Editor And Export
 
 1. Confirm the editor opens with one card per recorded click.

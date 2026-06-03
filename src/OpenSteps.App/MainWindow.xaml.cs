@@ -18,7 +18,11 @@ public sealed record ScreenshotModeOption(string DisplayName, ScreenshotMode Mod
 
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
+    private const int ActivationSettleDelayMs = 150;
+
     private readonly ActiveWindowService _activeWindowService = new();
+    private readonly ClickTargetClassifier _clickTargetClassifier = new();
+    private readonly CaptureTargetResolver _captureTargetResolver = new();
     private readonly MonitorService _monitorService = new();
     private readonly ScreenshotService _screenshotService;
     private readonly UiAutomationService _uiAutomationService = new();
@@ -70,6 +74,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public ObservableCollection<RecordedStep> Steps { get; } = [];
+
+    public ObservableCollection<SkippedCaptureEvent> SkippedCaptureEvents { get; } = [];
 
     public ScreenshotModeOption[] ScreenshotModeOptions { get; } =
     [
@@ -205,7 +211,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private bool ShouldIgnoreClick(int x, int y)
     {
-        return ContainsMainWindowPoint(x, y);
+        return false;
     }
 
     private void MouseHook_ClickCaptured(object? sender, ClickCapturedEventArgs e)
@@ -215,16 +221,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        Dispatcher.BeginInvoke(async () =>
-        {
-            if (_screenshotCaptureTargetStep is { } targetStep)
-            {
-                await CaptureScreenshotForExistingStepAsync(targetStep, e.X, e.Y);
-                return;
-            }
-
-            await CaptureStepAsync(e.X, e.Y);
-        });
+        Dispatcher.BeginInvoke(async () => await HandleCapturedClickAsync(e.X, e.Y));
     }
 
     private void KeyboardHook_KeyboardInputCaptured(object? sender, KeyboardInputEventArgs e)
@@ -237,7 +234,40 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Dispatcher.BeginInvoke(async () => await HandleKeyboardInputAsync(e));
     }
 
-    private async Task CaptureStepAsync(int x, int y)
+    private async Task HandleCapturedClickAsync(int x, int y)
+    {
+        var openStepsHandles = GetOpenStepsWindowHandles();
+        var immediateTarget = _clickTargetClassifier.ClassifyPoint(x, y, openStepsHandles);
+        var foregroundBeforeDelay = _activeWindowService.GetForegroundWindowHandle();
+
+        if (immediateTarget.Classification is ClickClassification.OpenStepsWindow or ClickClassification.TaskbarOrShell)
+        {
+            AddSkippedCaptureEvent(immediateTarget, immediateTarget.SkipReason ?? "Skipped capture", foregroundBeforeDelay, null);
+            return;
+        }
+
+        await Task.Delay(ActivationSettleDelayMs);
+
+        openStepsHandles = GetOpenStepsWindowHandles();
+        var foregroundAfterDelay = _activeWindowService.GetForegroundWindowHandle();
+        var foregroundTarget = _clickTargetClassifier.ClassifyWindow(foregroundAfterDelay, openStepsHandles);
+        var resolution = _captureTargetResolver.Resolve(immediateTarget, foregroundTarget);
+        if (!resolution.ShouldRecord)
+        {
+            AddSkippedCaptureEvent(immediateTarget, resolution.SkipReason ?? "Skipped capture", foregroundBeforeDelay, foregroundAfterDelay);
+            return;
+        }
+
+        if (_screenshotCaptureTargetStep is { } targetStep)
+        {
+            await CaptureScreenshotForExistingStepAsync(targetStep, x, y, resolution);
+            return;
+        }
+
+        await CaptureStepAsync(x, y, resolution);
+    }
+
+    private async Task CaptureStepAsync(int x, int y, CaptureTargetResolution? resolution = null)
     {
         if (!await _captureLock.WaitAsync(0))
         {
@@ -258,13 +288,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
             try
             {
-                var activeWindow = _activeWindowService.Capture();
-                step.ActiveWindowHandle = activeWindow.Handle;
-                step.WindowTitle = activeWindow.Title;
-                step.ProcessName = activeWindow.ProcessName;
-                step.ExecutablePath = activeWindow.ExecutablePath;
-                step.WindowBounds = activeWindow.Bounds;
-                step.ClickInsideActiveWindowBounds = ContainsBounds(activeWindow.Bounds, x, y);
+                ApplyActiveWindowMetadata(step, resolution?.TargetHwnd ?? IntPtr.Zero, x, y);
             }
             catch (Exception ex)
             {
@@ -305,7 +329,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
             try
             {
-                var screenshot = await _screenshotService.CaptureAsync(GetSessionImagesDirectory(), step.Index, x, y, ScreenshotMode);
+                var screenshot = await _screenshotService.CaptureAsync(GetSessionImagesDirectory(), step.Index, x, y, ScreenshotMode, resolution?.TargetHwnd ?? IntPtr.Zero);
                 ApplyScreenshotResult(step, screenshot);
                 step.ScreenshotCaptured = true;
             }
@@ -880,7 +904,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
-    private async Task CaptureScreenshotForExistingStepAsync(RecordedStep step, int x, int y)
+    private async Task CaptureScreenshotForExistingStepAsync(RecordedStep step, int x, int y, CaptureTargetResolution resolution)
     {
         try
         {
@@ -897,13 +921,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
             try
             {
-                var activeWindow = _activeWindowService.Capture();
-                step.ActiveWindowHandle = activeWindow.Handle;
-                step.WindowTitle = activeWindow.Title;
-                step.ProcessName = activeWindow.ProcessName;
-                step.ExecutablePath = activeWindow.ExecutablePath;
-                step.WindowBounds = activeWindow.Bounds;
-                step.ClickInsideActiveWindowBounds = ContainsBounds(activeWindow.Bounds, x, y);
+                ApplyActiveWindowMetadata(step, resolution.TargetHwnd, x, y);
             }
             catch (Exception ex)
             {
@@ -945,7 +963,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 step.UserTitle = title.Title;
             }
 
-            var screenshot = await _screenshotService.CaptureAsync(GetSessionImagesDirectory(), $"step-{step.Index:000}-manual.png", x, y, ScreenshotMode);
+            var screenshot = await _screenshotService.CaptureAsync(GetSessionImagesDirectory(), $"step-{step.Index:000}-manual.png", x, y, ScreenshotMode, resolution.TargetHwnd);
             ApplyScreenshotResult(step, screenshot);
             step.ScreenshotCaptured = true;
             SyncSessionOrder();
@@ -1214,6 +1232,56 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         var point = PointFromScreen(new System.Windows.Point(x, y));
         return point.X >= 0 && point.Y >= 0 && point.X <= ActualWidth && point.Y <= ActualHeight;
+    }
+
+    private IReadOnlySet<IntPtr> GetOpenStepsWindowHandles()
+    {
+        var handles = new HashSet<IntPtr>();
+        foreach (Window window in System.Windows.Application.Current.Windows)
+        {
+            var handle = new WindowInteropHelper(window).Handle;
+            if (handle != IntPtr.Zero)
+            {
+                handles.Add(handle);
+            }
+        }
+
+        return handles;
+    }
+
+    private void AddSkippedCaptureEvent(ClickTargetInfo target, string reason, IntPtr? foregroundBeforeDelay, IntPtr? foregroundAfterDelay)
+    {
+        SkippedCaptureEvents.Insert(0, new SkippedCaptureEvent
+        {
+            X = target.X,
+            Y = target.Y,
+            Reason = reason,
+            HitHwnd = target.HitHwnd,
+            RootHwnd = target.RootHwnd,
+            HitClassName = target.HitClassName,
+            RootClassName = target.RootClassName,
+            ProcessName = target.ProcessName,
+            ForegroundHwndBeforeDelay = foregroundBeforeDelay,
+            ForegroundHwndAfterDelay = foregroundAfterDelay
+        });
+
+        while (SkippedCaptureEvents.Count > 25)
+        {
+            SkippedCaptureEvents.RemoveAt(SkippedCaptureEvents.Count - 1);
+        }
+    }
+
+    private void ApplyActiveWindowMetadata(RecordedStep step, IntPtr targetHwnd, int x, int y)
+    {
+        var activeWindow = targetHwnd == IntPtr.Zero
+            ? _activeWindowService.Capture()
+            : _activeWindowService.Capture(targetHwnd);
+        step.ActiveWindowHandle = activeWindow.Handle;
+        step.WindowTitle = activeWindow.Title;
+        step.ProcessName = activeWindow.ProcessName;
+        step.ExecutablePath = activeWindow.ExecutablePath;
+        step.WindowBounds = activeWindow.Bounds;
+        step.ClickInsideActiveWindowBounds = ContainsBounds(activeWindow.Bounds, x, y);
     }
 
     private void PositionControllerBottomCenter()

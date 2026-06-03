@@ -14,10 +14,20 @@ public sealed class WindowBoundsService
             throw new InvalidOperationException("Foreground window handle was empty.");
         }
 
+        return GetWindowBounds(hwnd);
+    }
+
+    public WindowCaptureBounds GetWindowBounds(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero)
+        {
+            throw new InvalidOperationException("Window handle was empty.");
+        }
+
         var bounds = TryGetDwmExtendedFrameBounds(hwnd) ?? TryGetWindowRectBounds(hwnd);
         if (bounds is null)
         {
-            throw new InvalidOperationException("Foreground window bounds could not be read.");
+            throw new InvalidOperationException("Window bounds could not be read.");
         }
 
         Validate(bounds);

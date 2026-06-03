@@ -13,11 +13,21 @@ internal static partial class NativeMethods
     internal const uint MONITORINFOF_PRIMARY = 0x00000001;
     internal const int MDT_EFFECTIVE_DPI = 0;
     internal const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
+    internal const uint GA_ROOT = 2;
 
     internal delegate IntPtr LowLevelHookProc(int nCode, IntPtr wParam, IntPtr lParam);
 
     [LibraryImport("user32.dll")]
     internal static partial IntPtr GetForegroundWindow();
+
+    [LibraryImport("user32.dll")]
+    internal static partial IntPtr WindowFromPoint(POINT point);
+
+    [LibraryImport("user32.dll")]
+    internal static partial IntPtr GetAncestor(IntPtr hwnd, uint gaFlags);
+
+    [LibraryImport("user32.dll", EntryPoint = "GetClassNameW", StringMarshalling = StringMarshalling.Utf16)]
+    internal static partial int GetClassName(IntPtr hWnd, Span<char> className, int maxCount);
 
     [LibraryImport("user32.dll", EntryPoint = "GetWindowTextW", StringMarshalling = StringMarshalling.Utf16)]
     internal static partial int GetWindowText(IntPtr hWnd, Span<char> text, int count);
