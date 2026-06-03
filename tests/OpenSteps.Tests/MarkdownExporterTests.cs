@@ -96,6 +96,30 @@ public sealed class MarkdownExporterTests
     }
 
     [Fact]
+    public async Task ExportAsync_CanWriteMarkdownAndHtmlFiles()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "OpenSteps.Tests", Guid.NewGuid().ToString("N"));
+        var session = new RecordingSession { Title = "Format Test" };
+        session.Steps.Add(new RecordedStep
+        {
+            GeneratedTitle = "Generated",
+            UserTitle = "Export formats",
+            UserDescription = "Check the outputs."
+        });
+
+        var result = await new MarkdownExporter().ExportAsync(
+            session,
+            temp,
+            GuideExportFormat.Markdown | GuideExportFormat.Html);
+
+        Assert.True(File.Exists(result.MarkdownPath));
+        Assert.True(File.Exists(result.HtmlPath));
+        Assert.Contains(result.MarkdownPath, result.OutputPaths);
+        Assert.Contains(result.HtmlPath, result.OutputPaths);
+        Assert.Contains("<h2>Step 1: Export formats</h2>", await File.ReadAllTextAsync(result.HtmlPath));
+    }
+
+    [Fact]
     public async Task ExportAsync_CreatesUniqueFolderWhenTitleExists()
     {
         var temp = Path.Combine(Path.GetTempPath(), "OpenSteps.Tests", Guid.NewGuid().ToString("N"));

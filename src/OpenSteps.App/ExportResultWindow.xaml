@@ -18,9 +18,15 @@
         <StackPanel>
             <TextBlock Text="Export complete" FontSize="22" FontWeight="SemiBold"
                        Foreground="{StaticResource TextPrimaryBrush}" />
-            <TextBlock x:Name="PathText" Margin="0,10,0,0"
+            <TextBlock Text="Created files" Margin="0,10,0,6"
+                       FontWeight="SemiBold"
+                       Foreground="{StaticResource TextPrimaryBrush}" />
+            <TextBox x:Name="PathText" Margin="0,0,0,0"
+                     IsReadOnly="True"
+                     AcceptsReturn="True"
                        TextWrapping="Wrap"
-                       Foreground="{StaticResource TextSecondaryBrush}" />
+                     VerticalScrollBarVisibility="Auto"
+                     MinHeight="72" />
             <TextBlock Text="Warnings" Margin="0,18,0,6"
                        FontWeight="SemiBold"
                        Foreground="{StaticResource TextPrimaryBrush}" />

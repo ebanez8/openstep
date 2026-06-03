@@ -48,23 +48,6 @@
 
         <ScrollViewer Grid.Row="1" Padding="20" VerticalScrollBarVisibility="Auto">
             <StackPanel>
-            <Expander Header="Skipped capture events" Margin="0,0,0,14">
-                <Border Background="{StaticResource PanelBackgroundBrush}" BorderBrush="{StaticResource BorderSoftBrush}"
-                        BorderThickness="1" CornerRadius="12" Padding="14">
-                    <ItemsControl ItemsSource="{Binding SkippedCaptureEvents}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding DisplaySummary}"
-                                           TextWrapping="Wrap"
-                                           FontFamily="Consolas"
-                                           FontSize="12"
-                                           Foreground="{StaticResource TextSecondaryBrush}"
-                                           Margin="0,0,0,8" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </Border>
-            </Expander>
             <ItemsControl x:Name="StepsList" ItemsSource="{Binding Steps}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
@@ -192,10 +175,6 @@
                                              Margin="0,10,0,0" MinHeight="72" TextWrapping="Wrap"
                                              AcceptsReturn="True" VerticalScrollBarVisibility="Auto" />
 
-                                    <Expander Grid.Row="3" Header="Capture debug/status" Margin="0,10,0,0">
-                                        <TextBlock Text="{Binding MetadataSummary}" TextWrapping="Wrap"
-                                                   FontFamily="Consolas" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
-                                    </Expander>
                                 </Grid>
                             </Grid>
                         </Border>

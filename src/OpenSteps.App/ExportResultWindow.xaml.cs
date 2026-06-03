@@ -12,7 +12,9 @@ public partial class ExportResultWindow : Window
     {
         _result = result;
         InitializeComponent();
-        PathText.Text = result.MarkdownPath;
+        PathText.Text = result.OutputPaths.Count == 0
+            ? result.ExportFolder
+            : string.Join(Environment.NewLine, result.OutputPaths);
         WarningsTextBox.Text = result.Warnings.Count == 0
             ? "No warnings."
             : string.Join(Environment.NewLine, result.Warnings);

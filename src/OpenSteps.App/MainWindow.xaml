@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="OpenSteps" Height="82" Width="760" MinHeight="82" MinWidth="760"
+        Title="OpenSteps" Height="82" Width="800" MinHeight="82" MinWidth="800"
         WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True"
         Background="Transparent" Topmost="True">
     <Window.Resources>
@@ -89,7 +89,7 @@
                               DisplayMemberPath="DisplayName"
                               SelectedValuePath="Mode"
                               SelectedValue="{Binding ScreenshotMode, Mode=TwoWay}"
-                              Width="136" Height="34"
+                              Width="158" Height="36"
                               VerticalContentAlignment="Center"
                               Margin="0,0,14,0"
                               ToolTip="Full desktop captures all visible monitors. Active window only captures the foreground window when possible and falls back to full desktop if needed." />

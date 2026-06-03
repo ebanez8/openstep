@@ -5,6 +5,12 @@
     <ProjectReference Include="..\OpenSteps.Capture\OpenSteps.Capture.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Resource Include="..\..\img\OpenShelf.png">
+      <Link>img\OpenShelf.png</Link>
+    </Resource>
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
@@ -13,6 +19,7 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationIcon>Assets\OpenSteps.ico</ApplicationIcon>
   </PropertyGroup>
 
 </Project>

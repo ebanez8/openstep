@@ -75,8 +75,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     public ObservableCollection<RecordedStep> Steps { get; } = [];
 
-    public ObservableCollection<SkippedCaptureEvent> SkippedCaptureEvents { get; } = [];
-
     public ScreenshotModeOption[] ScreenshotModeOptions { get; } =
     [
         new("Full desktop", ScreenshotMode.FullDesktop),
@@ -238,11 +236,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         var openStepsHandles = GetOpenStepsWindowHandles();
         var immediateTarget = _clickTargetClassifier.ClassifyPoint(x, y, openStepsHandles);
-        var foregroundBeforeDelay = _activeWindowService.GetForegroundWindowHandle();
 
         if (immediateTarget.Classification is ClickClassification.OpenStepsWindow or ClickClassification.TaskbarOrShell)
         {
-            AddSkippedCaptureEvent(immediateTarget, immediateTarget.SkipReason ?? "Skipped capture", foregroundBeforeDelay, null);
             return;
         }
 
@@ -254,7 +250,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var resolution = _captureTargetResolver.Resolve(immediateTarget, foregroundTarget);
         if (!resolution.ShouldRecord)
         {
-            AddSkippedCaptureEvent(immediateTarget, resolution.SkipReason ?? "Skipped capture", foregroundBeforeDelay, foregroundAfterDelay);
             return;
         }
 
@@ -564,6 +559,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     internal async Task ExportMarkdownFromEditorAsync()
     {
+        var options = new ExportOptionsWindow
+        {
+            Owner = _editorWindow
+        };
+
+        if (options.ShowDialog() != true)
+        {
+            return;
+        }
+
         using var dialog = new WinForms.FolderBrowserDialog
         {
             Description = "Choose where to create the exported guide folder",
@@ -580,7 +585,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             SyncSessionOrder();
             _session.Title = GetCurrentSessionTitle();
             await SaveSessionAsync(showMessage: false);
-            var result = await _markdownExporter.ExportAsync(_session, dialog.SelectedPath);
+            var result = await _markdownExporter.ExportAsync(_session, dialog.SelectedPath, options.SelectedFormats);
             new ExportResultWindow(result)
             {
                 Owner = _editorWindow
@@ -1247,28 +1252,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         return handles;
-    }
-
-    private void AddSkippedCaptureEvent(ClickTargetInfo target, string reason, IntPtr? foregroundBeforeDelay, IntPtr? foregroundAfterDelay)
-    {
-        SkippedCaptureEvents.Insert(0, new SkippedCaptureEvent
-        {
-            X = target.X,
-            Y = target.Y,
-            Reason = reason,
-            HitHwnd = target.HitHwnd,
-            RootHwnd = target.RootHwnd,
-            HitClassName = target.HitClassName,
-            RootClassName = target.RootClassName,
-            ProcessName = target.ProcessName,
-            ForegroundHwndBeforeDelay = foregroundBeforeDelay,
-            ForegroundHwndAfterDelay = foregroundAfterDelay
-        });
-
-        while (SkippedCaptureEvents.Count > 25)
-        {
-            SkippedCaptureEvents.RemoveAt(SkippedCaptureEvents.Count - 1);
-        }
     }
 
     private void ApplyActiveWindowMetadata(RecordedStep step, IntPtr targetHwnd, int x, int y)

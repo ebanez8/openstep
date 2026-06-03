@@ -25,7 +25,7 @@ Use this checklist before demoing OpenSteps.
 3. Click a Notepad icon on the Windows taskbar to open or maximize Notepad.
 4. Confirm no new recorded step is created for the taskbar click.
 5. Confirm no screenshot of OpenSteps is created.
-6. Open the editor and confirm **Skipped capture events** shows a skipped taskbar/shell click.
+6. Confirm the taskbar click does not appear as a recorded step.
 7. Click inside Notepad.
 8. Confirm that click records normally.
 9. Open Notepad and File Explorer.
