@@ -1,63 +1,133 @@
 # OpenSteps
 
-OpenSteps is a modern open-source Steps Recorder for Windows. It records desktop workflows and exports clean Markdown guides with screenshots.
+> [!WARNING]
+> OpenSteps is an early Windows beta. It is usable for local workflow capture, but you should review every screenshot before sharing or exporting a guide.
 
-![OpenSteps screenshot placeholder](docs/screenshot-placeholder.svg)
+<p align="center"><strong>A Windows-native recorder for turning desktop workflows into clean step-by-step guides.</strong></p>
 
-## Features
+OpenSteps records what you do on Windows, captures screenshots and click context, then turns the result into an editable guide you can export as Markdown or HTML. It is built for support docs, onboarding notes, internal SOPs, QA repro steps, and tutorials where you want a local tool instead of a cloud recorder.
 
-- No cloud, no account, no telemetry, and no uploads.
-- Local-first recording with screenshots and click metadata.
-- Local saved sessions that can be reopened, renamed, edited, deleted, and exported again.
-- Global left-click capture across desktop apps.
-- Screenshot mode setting for full desktop capture or active-window-only capture.
-- UI Automation metadata for useful editable step titles.
-- Screenshot click highlights.
-- Manual screenshot editing with local pixelated redactions and optional red circles before export.
-- Screenshot cropping for reducing irrelevant or private screenshot areas.
-- Editable step list with manual steps, collapsible cards, delete, and move controls.
-- Markdown preview with copy support before export.
-- Markdown export that creates a portable `guide.md` plus ordered local `images/step-001.png` assets.
+<p align="center">
+  <img src="img/initial.png" alt="OpenSteps before recording" width="720" />
+  <br />
+  <em>OpenSteps before recording</em>
+</p>
+
+<p align="center">
+  <img src="img/guide.png" alt="OpenSteps guide editor" width="720" />
+  <br />
+  <em>Editing a captured guide</em>
+</p>
+
+## What It Does
+
+- Records desktop workflows with global click capture.
+- Captures screenshots, click highlights, active-window metadata, and UI Automation context.
+- Supports full-desktop screenshots or active-window-only screenshots.
+- Skips OpenSteps UI, taskbar, and system-tray clicks so recordings stay focused on the real workflow.
+- Saves recordings locally as editable sessions.
+- Lets you rename guides, edit step titles and descriptions, reorder steps, delete steps, and insert manual steps.
+- Lets you capture a screenshot for a manual step.
+- Supports screenshot redaction and cropping before export.
+- Collapses long step cards so larger recordings are easier to edit.
+- Exports portable Markdown or HTML guides with relative image links.
 
 ## Why It Exists
 
-Windows Steps Recorder is useful but dated. OpenSteps is built for IT documentation, tutorials, onboarding, and support guides where teams need simple local workflow capture without a SaaS account or browser extension.
+Windows Steps Recorder was useful, but it is dated and limited. OpenSteps is a modern local-first replacement for people who need to document Windows workflows quickly without uploading screenshots, installing a browser extension, or using a SaaS account.
 
-## Build And Run
+OpenSteps is especially useful for:
 
-Prerequisites:
+- IT support guides.
+- Internal process documentation.
+- QA reproduction steps.
+- Customer support walkthroughs.
+- Training and onboarding material.
+- Personal notes for repeated desktop tasks.
 
-- Windows 10 or later.
-- .NET 8 SDK with Windows Desktop runtime.
+## Export
 
-Commands:
+OpenSteps exports a portable folder containing the guide file and ordered screenshots:
 
-```powershell
-dotnet build OpenSteps.sln
-dotnet test OpenSteps.sln
-dotnet run --project src/OpenSteps.App
+```text
+Exported Guide/
+guide.md
+guide.html
+images/
+step-001.png
+step-002.png
+step-003.png
 ```
+
+Markdown and HTML exports use relative links such as:
+
+```markdown
+![Step 1](images/step-001.png)
+```
+
+The exported guide does not link back to `%LOCALAPPDATA%`, so you can move or share the export folder as a self-contained guide.
 
 ## Privacy
 
-OpenSteps records screenshots, click metadata, and privacy-safe keyboard activity locally. It does not upload anything, does not require an account, and does not include telemetry. The MVP detects that typing happened but does not record actual typed characters by default. Safe actions such as `Enter`, `Tab`, and shortcuts like `Ctrl+S` may be recorded as documentation steps. Password and secure fields are treated cautiously. Screenshots may contain sensitive information, so review captured steps before sharing or exporting.
+OpenSteps runs locally. It does not require an account, does not upload screenshots, and does not include telemetry.
 
-The screenshot mode setting controls how much of the desktop is captured. Full desktop mode captures all visible monitors. Active window only mode captures the foreground window when possible. If active-window capture fails, OpenSteps falls back to full desktop capture so the step is not lost.
+Recordings are saved under:
 
-OpenSteps saves recordings locally as sessions under `%LOCALAPPDATA%\OpenSteps\Sessions`. Each session has its own folder with `session.json` and local screenshots. Users can reopen previous recordings, edit them, rename them, delete them, and export Markdown again. Export copies images into the chosen export folder and uses relative Markdown links; it does not link directly to AppData paths.
+```text
+%LOCALAPPDATA%\OpenSteps\Sessions
+```
 
-Screenshots may contain sensitive data. Before exporting or sharing a guide, review each screenshot and use manual redaction to hide private information. This is especially important after any fallback from active-window capture to full desktop capture. OpenSteps does not upload screenshots and does not automatically detect sensitive information.
+Each saved session contains a `session.json` file and local screenshots. You can reopen, rename, edit, delete, and export sessions again.
 
-Screenshot cropping can help remove irrelevant or sensitive areas before export, but users should still review every screenshot before sharing a guide.
+Screenshot modes affect how much screen content is captured:
 
-Exports are written as portable folders that contain `guide.md` and an `images` subfolder. Image links are relative, so exported guides do not point back to `%LOCALAPPDATA%` session paths. If an export folder name already exists, OpenSteps creates a numbered folder such as `Guide Title (1)` instead of overwriting it.
+- **Full desktop** captures all visible monitors.
+- **Active window only** captures the foreground window when possible.
+
+If active-window capture fails, OpenSteps falls back to full-desktop capture so the step is not lost. Screenshots can still contain private data, so review every step before sharing a guide. Use crop and redaction to remove irrelevant or sensitive areas.
+
+OpenSteps detects that typing happened, but it does not store typed characters by default. Safe keys such as `Enter`, `Tab`, and shortcuts like `Ctrl+S` may be recorded as documentation steps. Password and secure fields are treated cautiously.
+
+## Build From Source
+
+Requirements:
+
+- Windows 10 or newer.
+- .NET 8 SDK with Windows Desktop runtime.
+
+Build and run:
+
+```powershell
+dotnet build OpenSteps.sln
+dotnet run --project src\OpenSteps.App\OpenSteps.App.csproj
+```
+
+Run tests:
+
+```powershell
+dotnet test OpenSteps.sln
+```
+
+## Known Limits
+
+- Elevated/admin apps may block hooks, screenshots, or metadata unless OpenSteps is also elevated.
+- Some apps expose little or no UI Automation metadata; screenshots and click coordinates should still work.
+- Active-window capture depends on Windows reporting usable window bounds.
+- Full-screen apps and protected content may interfere with screenshot capture.
+- Active-window capture may fall back to full-desktop capture when a window cannot be captured safely.
+- The app is Windows-first and currently targets local desktop workflows only.
 
 ## Roadmap
 
-- Better toolbar placement.
-- Richer UI Automation captions.
-- Additional export formats after the Markdown workflow is solid.
+- More reliable capture around unusual shell surfaces.
+- Better generated titles from UI Automation metadata.
+- More editor polish for long guides.
+- Richer HTML export styling.
 
 ## Contributing
 
-See `AGENTS.md` for repository guidelines. Keep changes focused, add tests for Core behavior, and include manual verification notes for capture or WPF UI changes.
+See [AGENTS.md](AGENTS.md) for repository guidelines. Keep changes focused, add tests for core behavior, and include manual verification notes for capture or WPF UI changes.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
