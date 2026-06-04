@@ -45,6 +45,18 @@ OpenSteps is especially useful for:
 - Training and onboarding material.
 - Personal notes for repeated desktop tasks.
 
+## Download
+
+Download the latest `OpenSteps-*-win-x64.zip` from [GitHub Releases](https://github.com/ebanez8/openstep/releases), extract it, and run:
+
+```text
+OpenSteps.App.exe
+```
+
+The Windows x64 release is self-contained, so the .NET runtime does not need to be installed separately.
+
+OpenSteps is not code-signed yet. Windows SmartScreen may warn on first launch.
+
 ## Export
 
 OpenSteps exports a portable folder containing the guide file and ordered screenshots:

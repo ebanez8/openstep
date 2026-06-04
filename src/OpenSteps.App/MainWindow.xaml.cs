@@ -29,7 +29,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly DpiAwarenessService _dpiAwarenessService = new();
     private readonly ScreenshotRedactionService _redactionService = new();
     private readonly StepTitleGenerator _titleGenerator = new();
-    private readonly MarkdownBuilder _markdownBuilder = new();
     private readonly MarkdownExporter _markdownExporter = new();
     private readonly SessionStore _sessionStore = new();
     private readonly SettingsService _settingsService = new();
@@ -608,17 +607,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             WinForms.MessageBox.Show($"Export failed:\n{ex.Message}", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error);
         }
-    }
-
-    internal async Task PreviewMarkdownFromEditorAsync()
-    {
-        SyncSessionOrder();
-        _session.Title = GetCurrentSessionTitle();
-        await SaveSessionAsync(showMessage: false);
-        new MarkdownPreviewWindow(_markdownBuilder.BuildMarkdown(_session), _session)
-        {
-            Owner = _editorWindow
-        }.ShowDialog();
     }
 
     internal async Task SaveSessionFromEditorAsync()
