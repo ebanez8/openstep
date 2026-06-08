@@ -77,7 +77,7 @@ public sealed class MarkdownExporterTests
         var session = new RecordingSession { Title = "Test Guide" };
         session.Steps.Add(new RecordedStep
         {
-            GeneratedTitle = "Click \"File\"",
+            GeneratedTitle = "Click the 'File' menu",
             UserTitle = "Open File menu",
             UserDescription = "Choose the main menu.",
             ScreenshotPath = image

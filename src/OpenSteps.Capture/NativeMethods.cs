@@ -7,8 +7,11 @@ internal static partial class NativeMethods
     internal const int WH_MOUSE_LL = 14;
     internal const int WH_KEYBOARD_LL = 13;
     internal const int WM_LBUTTONDOWN = 0x0201;
+    internal const int WM_RBUTTONDOWN = 0x0204;
     internal const int WM_KEYDOWN = 0x0100;
     internal const int WM_SYSKEYDOWN = 0x0104;
+    internal const int SM_CXDOUBLECLK = 36;
+    internal const int SM_CYDOUBLECLK = 37;
     internal const uint MONITOR_DEFAULTTONEAREST = 0x00000002;
     internal const uint MONITORINFOF_PRIMARY = 0x00000001;
     internal const int MDT_EFFECTIVE_DPI = 0;
@@ -58,6 +61,12 @@ internal static partial class NativeMethods
 
     [LibraryImport("user32.dll")]
     internal static partial IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [LibraryImport("user32.dll")]
+    internal static partial uint GetDoubleClickTime();
+
+    [LibraryImport("user32.dll")]
+    internal static partial int GetSystemMetrics(int nIndex);
 
     [LibraryImport("user32.dll")]
     internal static partial IntPtr GetThreadDpiAwarenessContext();

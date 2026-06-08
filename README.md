@@ -21,14 +21,14 @@ OpenSteps records what you do on Windows, captures screenshots and click context
 
 ## What It Does
 
-- Records desktop workflows with global click capture.
+- Records desktop workflows with global click, right-click, and double-click capture.
 - Captures screenshots, click highlights, active-window metadata, and UI Automation context.
 - Supports full-desktop screenshots or active-window-only screenshots.
 - Skips OpenSteps UI, taskbar, and system-tray clicks so recordings stay focused on the real workflow.
 - Saves recordings locally as editable sessions.
 - Lets you rename guides, edit step titles and descriptions, reorder steps, delete steps, and insert manual steps.
 - Lets you capture a screenshot for a manual step.
-- Supports screenshot redaction and cropping before export.
+- Supports screenshot redaction, cropping, annotations, and screenshot replacement before export.
 - Collapses long step cards so larger recordings are easier to edit.
 - Exports portable Markdown or HTML guides with relative image links.
 
@@ -97,6 +97,8 @@ Screenshot modes affect how much screen content is captured:
 - **Active window only** captures the foreground window when possible.
 
 If active-window capture fails, OpenSteps falls back to full-desktop capture so the step is not lost. Screenshots can still contain private data, so review every step before sharing a guide. Use crop and redaction to remove irrelevant or sensitive areas.
+
+The guide editor can import or paste a replacement screenshot when active-window capture grabs the wrong image. Screenshot annotations include rectangles, arrows, semi-transparent highlights, and sequential number or letter markers. Annotation edits are baked into a new PNG copy in the session images folder, so the original captured screenshot is not overwritten.
 
 OpenSteps detects that typing happened, but it does not store typed characters by default. Safe keys such as `Enter`, `Tab`, and shortcuts like `Ctrl+S` may be recorded as documentation steps. Password and secure fields are treated cautiously.
 

@@ -12,7 +12,7 @@ public sealed class StepTitleGeneratorTests
     {
         var step = new RecordedStep { ElementName = "Save", ControlType = "Button", UsefulElementFound = true };
 
-        Assert.Equal("Click \"Save\"", _generator.Generate(step));
+        Assert.Equal("Click the 'Save' button", _generator.Generate(step));
     }
 
     [Fact]
@@ -20,7 +20,7 @@ public sealed class StepTitleGeneratorTests
     {
         var step = new RecordedStep { ElementName = "File", ControlType = "MenuItem", UsefulElementFound = true };
 
-        Assert.Equal("Select \"File\"", _generator.Generate(step));
+        Assert.Equal("Open the 'File' menu", _generator.Generate(step));
     }
 
     [Fact]
@@ -28,7 +28,7 @@ public sealed class StepTitleGeneratorTests
     {
         var step = new RecordedStep { ElementName = "Search", ControlType = "Edit", UsefulElementFound = true };
 
-        Assert.Equal("Click the \"Search\" field", _generator.Generate(step));
+        Assert.Equal("Click the 'Search' field", _generator.Generate(step));
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public sealed class StepTitleGeneratorTests
             KeyCount = 12
         };
 
-        Assert.Equal("Type into \"Search\"", _generator.Generate(step));
+        Assert.Equal("Type into the 'Search' field", _generator.Generate(step));
     }
 
     [Fact]
@@ -143,5 +143,62 @@ public sealed class StepTitleGeneratorTests
 
         Assert.Equal("Enter hidden text", result.Title);
         Assert.Equal("sensitive text entry", result.Reason);
+    }
+
+    [Fact]
+    public void Generate_CreatesRightClickButtonTitle()
+    {
+        var step = new RecordedStep
+        {
+            ActionType = StepActionType.RightClick,
+            ElementName = "Save",
+            ControlType = "Button",
+            UsefulElementFound = true
+        };
+
+        Assert.Equal("Right-click the 'Save' button", _generator.Generate(step));
+    }
+
+    [Fact]
+    public void Generate_CreatesDoubleClickItemTitle()
+    {
+        var step = new RecordedStep
+        {
+            ActionType = StepActionType.DoubleClick,
+            ElementName = "Report.docx",
+            ControlType = "ListItem",
+            UsefulElementFound = true
+        };
+
+        Assert.Equal("Double-click the 'Report.docx' item", _generator.Generate(step));
+    }
+
+    [Fact]
+    public void Generate_CreatesRightClickWindowFallback()
+    {
+        var step = new RecordedStep { ActionType = StepActionType.RightClick, WindowTitle = "File Explorer" };
+
+        Assert.Equal("Right-click in File Explorer", _generator.Generate(step));
+    }
+
+    [Fact]
+    public void Generate_CreatesDoubleClickWindowFallback()
+    {
+        var step = new RecordedStep { ActionType = StepActionType.DoubleClick, WindowTitle = "File Explorer" };
+
+        Assert.Equal("Double-click in File Explorer", _generator.Generate(step));
+    }
+
+    [Fact]
+    public void Generate_UsesDoubleQuotesWhenNameContainsSingleQuote()
+    {
+        var step = new RecordedStep
+        {
+            ElementName = "Owner's Manual",
+            ControlType = "Button",
+            UsefulElementFound = true
+        };
+
+        Assert.Equal("Click the \"Owner's Manual\" button", _generator.Generate(step));
     }
 }

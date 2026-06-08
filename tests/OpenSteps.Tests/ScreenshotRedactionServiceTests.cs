@@ -109,6 +109,101 @@ public sealed class ScreenshotRedactionServiceTests
         Assert.True(redPixels > 0);
     }
 
+    [Fact]
+    public void ApplyEdits_DrawsRectangleAnnotation()
+    {
+        var temp = CreateTempDirectory();
+        var original = Path.Combine(temp, "original.png");
+        var output = Path.Combine(temp, "annotated.png");
+        CreateSolidImage(original, Color.White, 40, 40);
+
+        new ScreenshotRedactionService().ApplyEdits(
+            original,
+            output,
+            [],
+            [new ScreenshotAnnotation
+            {
+                Type = ScreenshotAnnotationType.Rectangle,
+                X1 = 5,
+                Y1 = 5,
+                X2 = 25,
+                Y2 = 25,
+                Color = "#D92D20",
+                StrokeThickness = 3
+            }]);
+
+        using var after = new Bitmap(output);
+        Assert.True(HasRedPixel(after));
+        Assert.Equal(Color.White.ToArgb(), after.GetPixel(30, 30).ToArgb());
+    }
+
+    [Fact]
+    public void ApplyEdits_DrawsHighlightAnnotation()
+    {
+        var temp = CreateTempDirectory();
+        var original = Path.Combine(temp, "original.png");
+        var output = Path.Combine(temp, "annotated.png");
+        CreateSolidImage(original, Color.White, 40, 40);
+
+        new ScreenshotRedactionService().ApplyEdits(
+            original,
+            output,
+            [],
+            [new ScreenshotAnnotation
+            {
+                Type = ScreenshotAnnotationType.Highlight,
+                X1 = 5,
+                Y1 = 5,
+                X2 = 25,
+                Y2 = 25,
+                Color = "#FFD84D",
+                Opacity = 0.35,
+                StrokeThickness = 1
+            }]);
+
+        using var after = new Bitmap(output);
+        Assert.NotEqual(Color.White.ToArgb(), after.GetPixel(10, 10).ToArgb());
+    }
+
+    [Fact]
+    public void ApplyEdits_DrawsArrowAndMarkerAnnotations()
+    {
+        var temp = CreateTempDirectory();
+        var original = Path.Combine(temp, "original.png");
+        var output = Path.Combine(temp, "annotated.png");
+        CreateSolidImage(original, Color.White, 80, 80);
+
+        new ScreenshotRedactionService().ApplyEdits(
+            original,
+            output,
+            [],
+            [
+                new ScreenshotAnnotation
+                {
+                    Type = ScreenshotAnnotationType.Arrow,
+                    X1 = 5,
+                    Y1 = 5,
+                    X2 = 60,
+                    Y2 = 60,
+                    Color = "#D92D20",
+                    StrokeThickness = 4
+                },
+                new ScreenshotAnnotation
+                {
+                    Type = ScreenshotAnnotationType.Marker,
+                    X1 = 40,
+                    Y1 = 20,
+                    X2 = 12,
+                    Text = "1",
+                    Color = "#D92D20",
+                    StrokeThickness = 3
+                }
+            ]);
+
+        using var after = new Bitmap(output);
+        Assert.True(HasRedPixel(after));
+    }
+
     private static string CreateTempDirectory()
     {
         var path = Path.Combine(Path.GetTempPath(), "OpenSteps.Tests", Guid.NewGuid().ToString("N"));
@@ -116,15 +211,32 @@ public sealed class ScreenshotRedactionServiceTests
         return path;
     }
 
-    private static void CreateSolidImage(string path, Color color)
+    private static void CreateSolidImage(string path, Color color, int width = 10, int height = 10)
     {
-        using var image = new Bitmap(10, 10, PixelFormat.Format32bppArgb);
+        using var image = new Bitmap(width, height, PixelFormat.Format32bppArgb);
         using (var graphics = Graphics.FromImage(image))
         {
             graphics.Clear(color);
         }
 
         image.Save(path, ImageFormat.Png);
+    }
+
+    private static bool HasRedPixel(Bitmap image)
+    {
+        for (var y = 0; y < image.Height; y++)
+        {
+            for (var x = 0; x < image.Width; x++)
+            {
+                var pixel = image.GetPixel(x, y);
+                if (pixel.R > 180 && pixel.G < 120 && pixel.B < 120)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private static void CreateGradientImage(string path)

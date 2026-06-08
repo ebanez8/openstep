@@ -12,6 +12,12 @@ public sealed class RecordedStep
 
     public StepActionType ActionType { get; set; } = StepActionType.Click;
 
+    public string? MouseButton { get; set; }
+
+    public int ClickCount { get; set; } = 1;
+
+    public string? DoubleClickDetectionReason { get; set; }
+
     public string? ScreenshotRelativePath { get; set; }
 
     public string? EditedScreenshotRelativePath { get; set; }
@@ -200,6 +206,9 @@ public sealed class RecordedStep
                 $"Highlight coordinates: {FormatPoint(HighlightX, HighlightY)}",
                 $"Highlight inside captured bounds: {FormatBool(HighlightWasInsideCapturedBounds)}",
                 $"Action type: {ActionType}",
+                $"Mouse button: {MouseButton ?? "(unknown)"}",
+                $"Click count: {ClickCount}",
+                $"Double-click detection: {DoubleClickDetectionReason ?? "(none)"}",
                 $"Keyboard input detected: {(KeyboardInputDetected ? "yes" : "no")}",
                 $"Key count: {(KeyCount.HasValue ? KeyCount.Value.ToString() : "(not stored)")}",
                 $"Special key: {SpecialKeyName ?? "(none)"}",

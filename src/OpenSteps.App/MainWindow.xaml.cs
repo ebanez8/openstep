@@ -33,6 +33,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly SessionStore _sessionStore = new();
     private readonly SettingsService _settingsService = new();
     private readonly SemaphoreSlim _captureLock = new(1, 1);
+    private readonly SemaphoreSlim _saveLock = new(1, 1);
     private readonly DispatcherTimer _typingTimer;
     private readonly DispatcherTimer _recordingStatusTimer;
 
@@ -78,8 +79,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     public ScreenshotModeOption[] ScreenshotModeOptions { get; } =
     [
-        new("Full desktop", ScreenshotMode.FullDesktop),
-        new("Active window only", ScreenshotMode.ActiveWindow)
+        new("Full Desktop", ScreenshotMode.FullDesktop),
+        new("Active Window", ScreenshotMode.ActiveWindow)
     ];
 
     public ScreenshotMode ScreenshotMode
@@ -95,12 +96,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             _screenshotMode = value;
             _settings.ScreenshotMode = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ScreenshotMode)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ScreenshotModeDisplayText)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CaptureModeLabel)));
+            RefreshRecordingStatus();
             if (!_loadingSettings)
             {
                 _ = SaveSettingsAsync();
             }
         }
     }
+
+    public string ScreenshotModeDisplayText => ScreenshotModeLabels.GetDisplayText(ScreenshotMode);
+
+    public string CaptureModeLabel => $"Capturing: {ScreenshotModeDisplayText}";
 
     internal string SessionsRootDirectory => _sessionStore.RootDirectory;
 
@@ -225,7 +233,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        Dispatcher.BeginInvoke(async () => await HandleCapturedClickAsync(e.X, e.Y));
+        Dispatcher.BeginInvoke(async () => await HandleCapturedClickAsync(e.X, e.Y, e.ActionType, e.MouseButton, e.ClickCount, e.DoubleClickDetectionReason));
     }
 
     private void KeyboardHook_KeyboardInputCaptured(object? sender, KeyboardInputEventArgs e)
@@ -238,7 +246,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Dispatcher.BeginInvoke(async () => await HandleKeyboardInputAsync(e));
     }
 
-    private async Task HandleCapturedClickAsync(int x, int y)
+    private async Task HandleCapturedClickAsync(
+        int x,
+        int y,
+        StepActionType actionType,
+        string mouseButton,
+        int clickCount,
+        string? doubleClickDetectionReason)
     {
         var openStepsHandles = GetOpenStepsWindowHandles();
         var immediateTarget = _clickTargetClassifier.ClassifyPoint(x, y, openStepsHandles);
@@ -269,10 +283,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        await CaptureStepAsync(x, y, resolution);
+        await CaptureStepAsync(x, y, resolution, actionType, mouseButton, clickCount, doubleClickDetectionReason);
     }
 
-    private async Task CaptureStepAsync(int x, int y, CaptureTargetResolution? resolution = null)
+    private async Task CaptureStepAsync(
+        int x,
+        int y,
+        CaptureTargetResolution? resolution = null,
+        StepActionType actionType = StepActionType.Click,
+        string mouseButton = "Left",
+        int clickCount = 1,
+        string? doubleClickDetectionReason = null)
     {
         if (!await _captureLock.WaitAsync(0))
         {
@@ -285,6 +306,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             var step = new RecordedStep
             {
                 Index = Steps.Count + 1,
+                ActionType = actionType,
+                MouseButton = mouseButton,
+                ClickCount = clickCount,
+                DoubleClickDetectionReason = doubleClickDetectionReason,
                 ClickX = x,
                 ClickY = y,
                 VirtualScreenBounds = GetVirtualScreenBounds(),
@@ -616,7 +641,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     internal async Task AutosaveSessionFromEditorAsync()
     {
-        await SaveSessionAsync(showMessage: false);
+        await SaveSessionAsync(showMessage: false, refreshStepViews: false);
     }
 
     private async void OpenPreviousSession_Click(object sender, RoutedEventArgs e)
@@ -718,6 +743,66 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Show();
         Activate();
         await StartRecordingAsync();
+    }
+
+    internal async Task ImportScreenshotForStepFromEditorAsync(object sender)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not RecordedStep step)
+        {
+            return;
+        }
+
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Choose replacement screenshot",
+            Filter = "Image files (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp|All files (*.*)|*.*"
+        };
+
+        if (dialog.ShowDialog(_editorWindow) != true)
+        {
+            return;
+        }
+
+        try
+        {
+            var image = LoadBitmapFrame(dialog.FileName);
+            await ReplaceStepScreenshotAsync(step, image, "replacement");
+        }
+        catch (Exception ex)
+        {
+            WinForms.MessageBox.Show($"Screenshot could not be imported:\n{ex.Message}", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error);
+        }
+    }
+
+    internal async Task PasteScreenshotForStepFromEditorAsync(object sender)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not RecordedStep step)
+        {
+            return;
+        }
+
+        try
+        {
+            if (!System.Windows.Clipboard.ContainsImage())
+            {
+                WinForms.MessageBox.Show("Clipboard does not contain an image.", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Information);
+                return;
+            }
+
+            var image = System.Windows.Clipboard.GetImage();
+            if (image is null)
+            {
+                WinForms.MessageBox.Show("Clipboard does not contain an image.", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Information);
+                return;
+            }
+
+            image.Freeze();
+            await ReplaceStepScreenshotAsync(step, image, "pasted");
+        }
+        catch (Exception ex)
+        {
+            WinForms.MessageBox.Show($"Screenshot could not be pasted:\n{ex.Message}", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error);
+        }
     }
 
     internal void DeleteStepFromEditor(object sender)
@@ -834,14 +919,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
             var outputPath = GetEditedScreenshotPath(step);
             step.Redactions = [.. editor.Redactions];
-            if (step.Redactions.Count == 0)
+            if (step.Redactions.Count == 0 && editor.Annotations.Count == 0)
             {
-                step.EditedScreenshotPath = null;
+                if (editor.HasChanges || string.IsNullOrWhiteSpace(step.EditedScreenshotPath))
+                {
+                    step.EditedScreenshotPath = null;
+                    step.EditedScreenshotRelativePath = null;
+                }
             }
             else
             {
-                _redactionService.ApplyRedactions(step.ScreenshotPath, outputPath, step.Redactions);
+                var sourcePath = step.EffectiveScreenshotPath ?? step.ScreenshotPath;
+                _redactionService.ApplyEdits(sourcePath, outputPath, step.Redactions, editor.Annotations);
                 step.EditedScreenshotPath = outputPath;
+                step.EditedScreenshotRelativePath = Path.Combine("images", Path.GetFileName(outputPath)).Replace('\\', '/');
             }
 
             RefreshStepViews();
@@ -851,6 +942,30 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             WinForms.MessageBox.Show($"Screenshot could not be edited:\n{ex.Message}", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error);
         }
+    }
+
+    private async Task ReplaceStepScreenshotAsync(RecordedStep step, BitmapSource source, string prefix)
+    {
+        var outputPath = GetReplacementScreenshotPath(step, prefix);
+        using (var stream = File.Create(outputPath))
+        {
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(source));
+            encoder.Save(stream);
+        }
+
+        step.ScreenshotPath = outputPath;
+        step.ScreenshotRelativePath = Path.Combine("images", Path.GetFileName(outputPath)).Replace('\\', '/');
+        step.EditedScreenshotPath = null;
+        step.EditedScreenshotRelativePath = null;
+        step.Redactions.Clear();
+        step.ScreenshotCaptured = true;
+        step.ScreenshotWidth = source.PixelWidth;
+        step.ScreenshotHeight = source.PixelHeight;
+        step.ScreenshotError = null;
+
+        RefreshStepViews();
+        await SaveSessionAsync(showMessage: false);
     }
 
     private async Task CropScreenshotForStepAsync(RecordedStep step)
@@ -1180,7 +1295,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         return string.Equals(step.ProcessName, currentProcessName, StringComparison.OrdinalIgnoreCase);
     }
 
-    private void SyncSessionOrder()
+    private void SyncSessionOrder(bool refreshStepViews = true)
     {
         _session.Steps.Clear();
         foreach (var step in Steps)
@@ -1193,7 +1308,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             _session.Steps[i].Index = i + 1;
         }
 
-        RefreshStepViews();
+        if (refreshStepViews)
+        {
+            RefreshStepViews();
+        }
+
         UpdateSessionSummary();
     }
 
@@ -1221,7 +1340,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             var elapsed = DateTimeOffset.Now - _recordingStartedAt;
             var state = _isPaused ? "Paused" : "Recording";
             var stepLabel = Steps.Count == 1 ? "step" : "steps";
-            RecordingStatusText.Text = $"{state}  ·  {elapsed:mm\\:ss}  ·  {Steps.Count} {stepLabel}";
+            RecordingStatusText.Text = $"{state} - {ScreenshotModeDisplayText} - {elapsed:mm\\:ss} - {Steps.Count} {stepLabel}";
             RecordingDot.Visibility = _isPaused ? Visibility.Collapsed : Visibility.Visible;
             UpdateTrayStatus(state, elapsed, stepLabel);
         }
@@ -1385,12 +1504,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         return System.Drawing.SystemIcons.Application;
     }
 
-    private async Task SaveSessionAsync(bool showMessage)
+    private async Task SaveSessionAsync(bool showMessage, bool refreshStepViews = true)
     {
-        SyncSessionOrder();
-        _session.Title = GetCurrentSessionTitle();
-        var path = await _sessionStore.SaveAsync(_session);
-        UpdateSessionSummary();
+        await _saveLock.WaitAsync();
+        string path;
+        try
+        {
+            SyncSessionOrder(refreshStepViews);
+            _session.Title = GetCurrentSessionTitle();
+            path = await _sessionStore.SaveAsync(_session);
+            UpdateSessionSummary();
+        }
+        finally
+        {
+            _saveLock.Release();
+        }
 
         if (showMessage)
         {
@@ -1532,7 +1660,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private static void ApplyScreenshotResult(RecordedStep step, ScreenshotCaptureResult screenshot)
     {
         step.ScreenshotPath = screenshot.FilePath;
+        step.ScreenshotRelativePath = null;
         step.EditedScreenshotPath = null;
+        step.EditedScreenshotRelativePath = null;
         step.Redactions.Clear();
         step.ScreenshotCaptureMode = screenshot.CaptureMode;
         step.RequestedScreenshotMode = screenshot.RequestedScreenshotMode;
@@ -1571,7 +1701,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var original = step.ScreenshotPath ?? $"step-{step.Index:000}.png";
         var directory = Path.GetDirectoryName(original) ?? ".";
         var name = Path.GetFileNameWithoutExtension(original);
-        return Path.Combine(directory, $"{name}-redacted.png");
+        return Path.Combine(directory, $"{name}-annotated-{DateTimeOffset.Now:yyyyMMdd-HHmmssfff}.png");
+    }
+
+    private string GetReplacementScreenshotPath(RecordedStep step, string prefix)
+    {
+        var imagesDirectory = GetSessionImagesDirectory();
+        var stepId = step.Id.ToString("N")[..8];
+        return Path.Combine(imagesDirectory, $"{prefix}-{stepId}-{DateTimeOffset.Now:yyyyMMdd-HHmmssfff}.png");
     }
 
     private string GetCroppedScreenshotPath(RecordedStep step)

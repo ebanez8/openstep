@@ -31,7 +31,7 @@ public sealed class StepTitleGenerator
             var target = Clean(step.InputTargetName);
             if (!string.IsNullOrWhiteSpace(target))
             {
-                return new StepTitleResult($"Type into \"{target}\"", "named text input target");
+                return new StepTitleResult($"Type into the {Quote(target)} field", "named text input target");
             }
 
             if (!string.IsNullOrWhiteSpace(step.WindowTitle))
@@ -49,38 +49,56 @@ public sealed class StepTitleGenerator
 
         var name = Clean(step.ElementName);
         var controlType = Clean(step.ControlType);
+        var verb = GetPointerVerb(step.ActionType);
 
         if (step.UsefulElementFound && !string.IsNullOrWhiteSpace(name))
         {
             if (IsControlType(controlType, "Button"))
             {
-                return new StepTitleResult($"Click \"{name}\"", "useful Button element name");
+                return new StepTitleResult($"{verb} the {Quote(name)} button", $"useful Button element name for {step.ActionType}");
             }
 
             if (IsControlType(controlType, "MenuItem"))
             {
-                return new StepTitleResult($"Select \"{name}\"", "useful MenuItem element name");
+                return step.ActionType == StepActionType.Click
+                    ? new StepTitleResult($"Open the {Quote(name)} menu", "useful MenuItem element name")
+                    : new StepTitleResult($"{verb} the {Quote(name)} menu", $"useful MenuItem element name for {step.ActionType}");
             }
 
             if (IsControlType(controlType, "Edit"))
             {
-                return new StepTitleResult($"Click the \"{name}\" field", "useful Edit element name");
+                return new StepTitleResult($"{verb} the {Quote(name)} field", $"useful Edit element name for {step.ActionType}");
             }
 
-            return new StepTitleResult($"Click \"{name}\"", "useful UI Automation element name");
+            return new StepTitleResult($"{verb} the {Quote(name)} item", $"useful UI Automation element name for {step.ActionType}");
         }
 
         if (!string.IsNullOrWhiteSpace(step.WindowTitle))
         {
-            return new StepTitleResult($"Click in {step.WindowTitle}", "window title fallback");
+            return new StepTitleResult($"{verb} in {step.WindowTitle}", "window title fallback");
         }
 
         if (!string.IsNullOrWhiteSpace(step.ProcessName))
         {
-            return new StepTitleResult($"Click in {step.ProcessName}", "process name fallback");
+            return new StepTitleResult($"{verb} in {step.ProcessName}", "process name fallback");
         }
 
-        return new StepTitleResult($"Click at screen position ({step.ClickX}, {step.ClickY})", "coordinate fallback");
+        return new StepTitleResult($"{verb} at screen position ({step.ClickX}, {step.ClickY})", "coordinate fallback");
+    }
+
+    private static string GetPointerVerb(StepActionType actionType)
+    {
+        return actionType switch
+        {
+            StepActionType.RightClick => "Right-click",
+            StepActionType.DoubleClick => "Double-click",
+            _ => "Click"
+        };
+    }
+
+    private static string Quote(string value)
+    {
+        return value.Contains('\'') ? $"\"{value}\"" : $"'{value}'";
     }
 
     private static bool IsControlType(string? actual, string expected)

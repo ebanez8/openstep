@@ -61,6 +61,7 @@
                              Padding="2,0"
                              MinHeight="30"
                              ToolTip="Guide title"
+                             LostFocus="TextEdit_LostFocus"
                              TextChanged="SessionTitleBox_TextChanged" />
                 </StackPanel>
 
@@ -203,6 +204,16 @@
                                                         Click="CaptureStepScreenshot_Click"
                                                         Style="{StaticResource IconButton}"
                                                         Margin="4,0,0,0" />
+                                                <Button Content="&#xE8E5;"
+                                                        ToolTip="Import replacement screenshot"
+                                                        Click="ImportScreenshot_Click"
+                                                        Style="{StaticResource IconButton}"
+                                                        Margin="4,0,0,0" />
+                                                <Button Content="&#xE77F;"
+                                                        ToolTip="Paste replacement screenshot"
+                                                        Click="PasteScreenshot_Click"
+                                                        Style="{StaticResource IconButton}"
+                                                        Margin="4,0,0,0" />
                                                 <Rectangle Width="1" Height="20"
                                                            Fill="{StaticResource BorderSoftBrush}"
                                                            VerticalAlignment="Center"
@@ -304,12 +315,14 @@
                                                 <TextBox Grid.Row="0"
                                                          Text="{Binding UserTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                          TextChanged="StepTextChanged"
+                                                         LostFocus="TextEdit_LostFocus"
                                                          FontSize="16"
                                                          FontWeight="SemiBold" />
 
                                                 <TextBox Grid.Row="1"
                                                          Text="{Binding UserDescription, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                          TextChanged="StepTextChanged"
+                                                         LostFocus="TextEdit_LostFocus"
                                                          Margin="0,10,0,0"
                                                          MinHeight="92"
                                                          TextWrapping="Wrap"

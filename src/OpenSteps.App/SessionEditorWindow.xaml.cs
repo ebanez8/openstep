@@ -83,6 +83,16 @@ public partial class SessionEditorWindow : Window
         await _controller.CaptureScreenshotForStepFromEditorAsync(sender);
     }
 
+    private async void ImportScreenshot_Click(object sender, RoutedEventArgs e)
+    {
+        await _controller.ImportScreenshotForStepFromEditorAsync(sender);
+    }
+
+    private async void PasteScreenshot_Click(object sender, RoutedEventArgs e)
+    {
+        await _controller.PasteScreenshotForStepFromEditorAsync(sender);
+    }
+
     private void MoveStepUp_Click(object sender, RoutedEventArgs e)
     {
         _controller.MoveStepUpFromEditor(sender);
@@ -108,6 +118,7 @@ public partial class SessionEditorWindow : Window
         if (!_updatingTitle)
         {
             _controller.SetSessionTitleFromEditor(SessionTitleBox.Text);
+            ScheduleAutosave();
         }
     }
 
@@ -123,6 +134,12 @@ public partial class SessionEditorWindow : Window
     {
         _autosaveTimer.Stop();
         _autosaveTimer.Start();
+    }
+
+    private async void TextEdit_LostFocus(object sender, RoutedEventArgs e)
+    {
+        _autosaveTimer.Stop();
+        await _controller.AutosaveSessionFromEditorAsync();
     }
 
     private void SessionEditorWindow_Closing(object? sender, CancelEventArgs e)

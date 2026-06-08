@@ -15,7 +15,7 @@
                 <DropShadowEffect Color="#9DB4BE" BlurRadius="16" ShadowDepth="2" Opacity="0.14" />
             </Border.Effect>
             <DockPanel LastChildFill="False">
-                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                <WrapPanel DockPanel.Dock="Left" VerticalAlignment="Center">
                     <TextBlock Text="Tool" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"
                                VerticalAlignment="Center" Margin="0,0,10,0" />
                     <Button x:Name="PixelateToolButton" Content="Pixel" ToolTip="Pixelate"
@@ -24,9 +24,27 @@
                     <Button x:Name="RedCircleToolButton" Content="Circle" ToolTip="Draw red circle"
                             Click="RedCircleTool_Click"
                             Padding="12,6" Margin="0,0,8,0" />
+                    <Button x:Name="RectangleToolButton" Content="Rect" ToolTip="Draw rectangle"
+                            Click="RectangleTool_Click"
+                            Padding="12,6" Margin="0,0,8,0" />
+                    <Button x:Name="HighlightToolButton" Content="Highlight" ToolTip="Draw semi-transparent highlight"
+                            Click="HighlightTool_Click"
+                            Padding="12,6" Margin="0,0,8,0" />
+                    <Button x:Name="ArrowToolButton" Content="Arrow" ToolTip="Draw arrow"
+                            Click="ArrowTool_Click"
+                            Padding="12,6" Margin="0,0,8,0" />
+                    <Button x:Name="NumberToolButton" Content="1" ToolTip="Place numbered marker"
+                            Click="NumberTool_Click"
+                            Padding="12,6" Margin="0,0,8,0" />
+                    <Button x:Name="LetterToolButton" Content="A" ToolTip="Place letter marker"
+                            Click="LetterTool_Click"
+                            Padding="12,6" Margin="0,0,8,0" />
+                    <Button Content="Reset" ToolTip="Reset marker sequence"
+                            Click="ResetSequence_Click"
+                            Padding="12,6" Margin="0,0,8,0" />
                     <Button Content="Crop" ToolTip="Crop screenshot" Click="Crop_Click"
                             Padding="12,6" Margin="0,0,18,0" />
-                </StackPanel>
+                </WrapPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <Button Content="&#xE7A7;" ToolTip="Undo" Click="Undo_Click"
                             Style="{StaticResource IconButton}" Margin="0,0,8,0" />
