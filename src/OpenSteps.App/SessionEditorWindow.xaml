@@ -4,14 +4,15 @@
         xmlns:local="clr-namespace:OpenSteps.App"
         Title="OpenSteps" Width="1160" Height="780" MinWidth="940" MinHeight="620"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource AppBackgroundBrush}">
+        Background="{DynamicResource AppBackgroundBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}">
     <Window.Resources>
         <local:FileImageConverter x:Key="FileImageConverter" />
 
         <!--  Small "chip" used for action-type pills.  -->
         <Style x:Key="Chip" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource SoftSurfaceBrush}" />
-            <Setter Property="BorderBrush" Value="{StaticResource BorderSoftBrush}" />
+            <Setter Property="Background" Value="{DynamicResource SoftSurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSoftBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="999" />
             <Setter Property="Padding" Value="9,2" />
@@ -21,7 +22,7 @@
         <Style x:Key="ChipText" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
         </Style>
     </Window.Resources>
 
@@ -29,8 +30,8 @@
 
         <!--  ─────────── Header bar ─────────────────────────────────── -->
         <Border DockPanel.Dock="Top"
-                Background="{StaticResource PanelBackgroundBrush}"
-                BorderBrush="{StaticResource BorderSoftBrush}"
+                Background="{DynamicResource PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderSoftBrush}"
                 BorderThickness="0,0,0,1"
                 Padding="24,16">
             <Grid>
@@ -57,7 +58,7 @@
                              FontWeight="SemiBold"
                              BorderThickness="0"
                              Background="Transparent"
-                             Foreground="{StaticResource TextPrimaryBrush}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
                              Padding="2,0"
                              MinHeight="30"
                              ToolTip="Guide title"
@@ -105,13 +106,13 @@
                             Margin="0,140,0,0"
                             Visibility="Collapsed">
                     <Border Width="56" Height="56"
-                            Background="{StaticResource SoftSurfaceBrush}"
+                            Background="{DynamicResource SoftSurfaceBrush}"
                             CornerRadius="14"
                             HorizontalAlignment="Center">
                         <TextBlock Text="&#xE9F9;"
                                    FontFamily="Segoe MDL2 Assets"
                                    FontSize="22"
-                                   Foreground="{StaticResource TextMutedBrush}"
+                                   Foreground="{DynamicResource TextMutedBrush}"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center" />
                     </Border>
@@ -138,13 +139,13 @@
                                 <!--  Step rail with number badge and connecting line  -->
                                 <Grid Grid.Column="0">
                                     <Rectangle Width="2"
-                                               Fill="{StaticResource BorderSoftBrush}"
+                                               Fill="{DynamicResource BorderSoftBrush}"
                                                HorizontalAlignment="Center"
                                                VerticalAlignment="Stretch"
                                                Margin="0,8,0,0" />
                                     <Border Width="34" Height="34"
-                                            Background="{StaticResource PanelBackgroundBrush}"
-                                            BorderBrush="{StaticResource BorderBrush}"
+                                            Background="{DynamicResource PanelBackgroundBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}"
                                             BorderThickness="1"
                                             CornerRadius="999"
                                             HorizontalAlignment="Center"
@@ -153,7 +154,7 @@
                                         <TextBlock Text="{Binding Index}"
                                                    FontWeight="SemiBold"
                                                    FontSize="13"
-                                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                                    HorizontalAlignment="Center"
                                                    VerticalAlignment="Center" />
                                     </Border>
@@ -161,8 +162,8 @@
 
                                 <!--  Step card  -->
                                 <Border Grid.Column="1"
-                                        Background="{StaticResource PanelBackgroundBrush}"
-                                        BorderBrush="{StaticResource BorderSoftBrush}"
+                                        Background="{DynamicResource PanelBackgroundBrush}"
+                                        BorderBrush="{DynamicResource BorderSoftBrush}"
                                         BorderThickness="1"
                                         CornerRadius="12">
                                     <Border.Effect>
@@ -188,7 +189,7 @@
                                                     <TextBlock Text="{Binding ActionType}" Style="{StaticResource ChipText}" />
                                                 </Border>
                                                 <TextBlock Text="{Binding Index, StringFormat=Step {0}}"
-                                                           Foreground="{StaticResource TextMutedBrush}"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
                                                            FontSize="12"
                                                            VerticalAlignment="Center"
                                                            Margin="10,0,0,0" />
@@ -248,7 +249,7 @@
                                                     </Button.Style>
                                                 </Button>
                                                 <Rectangle Width="1" Height="20"
-                                                           Fill="{StaticResource BorderSoftBrush}"
+                                                           Fill="{DynamicResource BorderSoftBrush}"
                                                            VerticalAlignment="Center"
                                                            Margin="8,0" />
                                                 <Button Content="&#xECC8;"
@@ -266,7 +267,7 @@
                                                         Style="{StaticResource IconButton}"
                                                         Margin="4,0,0,0" />
                                                 <Rectangle Width="1" Height="20"
-                                                           Fill="{StaticResource BorderSoftBrush}"
+                                                           Fill="{DynamicResource BorderSoftBrush}"
                                                            VerticalAlignment="Center"
                                                            Margin="8,0" />
                                                 <Button Content="&#xE74D;"
@@ -285,8 +286,8 @@
 
                                             <Border Grid.Column="0"
                                                     Width="284" Height="176"
-                                                    Background="{StaticResource SoftSurfaceBrush}"
-                                                    BorderBrush="{StaticResource BorderSoftBrush}"
+                                                    Background="{DynamicResource SoftSurfaceBrush}"
+                                                    BorderBrush="{DynamicResource BorderSoftBrush}"
                                                     BorderThickness="1"
                                                     CornerRadius="10"
                                                     ClipToBounds="True"
@@ -298,7 +299,7 @@
 
                                                     <!--  Placeholder for steps without a screenshot  -->
                                                     <TextBlock Text="No screenshot"
-                                                               Foreground="{StaticResource TextMutedBrush}"
+                                                               Foreground="{DynamicResource TextMutedBrush}"
                                                                FontSize="12"
                                                                HorizontalAlignment="Center"
                                                                VerticalAlignment="Center">
@@ -318,7 +319,7 @@
                                                     <Border HorizontalAlignment="Left"
                                                             VerticalAlignment="Top"
                                                             Margin="10"
-                                                            Background="{StaticResource AccentBrush}"
+                                                            Background="{DynamicResource AccentBrush}"
                                                             CornerRadius="999"
                                                             Padding="8,3">
                                                         <Border.Style>
@@ -349,7 +350,7 @@
                                                     <Button Content="&#xE890;"
                                                             ToolTip="View screenshot"
                                                             Click="ViewScreenshot_Click"
-                                                            Background="#CCFFFFFF"
+                                                            Background="{DynamicResource OverlayButtonBrush}"
                                                             HorizontalAlignment="Right"
                                                             VerticalAlignment="Bottom"
                                                             Margin="0,0,10,10">

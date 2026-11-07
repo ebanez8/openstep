@@ -52,22 +52,30 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private bool _isRecording;
     private bool _isPaused;
     private DateTimeOffset _recordingStartedAt;
-    private AppSettings _settings = new();
-    private ScreenshotMode _screenshotMode = ScreenshotMode.FullDesktop;
-    private bool _loadingSettings;
+    private AppSettings _settings;
+    private ScreenshotMode _screenshotMode;
+    private GlobalHotkey? _recordingHotkey;
+    private string? _activeHotkeyText;
+    private bool _hotkeyBusy;
+    private RecordingIndicatorWindow? _recordingIndicator;
+    private SettingsWindow? _settingsWindow;
     private bool _isElevated;
     private bool _elevatedWindowWarned;
 
     public MainWindow()
     {
         _screenshotService = new ScreenshotService(_monitorService);
+        // Run off the UI thread: blocking on the async load here would otherwise deadlock.
+        _settings = Task.Run(_settingsService.LoadAsync).GetAwaiter().GetResult();
+        _screenshotMode = _settings.ScreenshotMode;
+        ApplyAppearanceSettings();
         InitializeComponent();
         DataContext = this;
         UpdateAdminButton();
-        Loaded += async (_, _) =>
+        Loaded += (_, _) =>
         {
             PositionControllerBottomCenter();
-            await LoadSettingsAsync();
+            RegisterRecordingHotkey();
         };
         _typingTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(850) };
         _typingTimer.Tick += async (_, _) => await FinalizePendingTypingAsync();
@@ -103,15 +111,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
 
             _screenshotMode = value;
-            _settings.ScreenshotMode = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ScreenshotMode)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ScreenshotModeDisplayText)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CaptureModeLabel)));
             RefreshRecordingStatus();
-            if (!_loadingSettings)
-            {
-                _ = SaveSettingsAsync();
-            }
         }
     }
 
@@ -121,18 +124,88 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     internal string SessionsRootDirectory => _sessionStore.RootDirectory;
 
-    private async Task LoadSettingsAsync()
+    /// <summary>Applies the current settings to the running app. Returns a message if the hotkey couldn't be registered.</summary>
+    internal string? ApplySettings()
     {
-        _loadingSettings = true;
+        ApplyAppearanceSettings();
+        return RegisterRecordingHotkey();
+    }
+
+    private void ApplyAppearanceSettings()
+    {
+        ThemeManager.Apply(_settings);
+        ClickMarkerRenderer.Appearance = new ClickMarkerAppearance(
+            _settings.ClickMarkerStyle,
+            ThemeManager.TryParseColor(_settings.ClickMarkerColor) is { } color
+                ? System.Drawing.Color.FromArgb(color.R, color.G, color.B)
+                : ClickMarkerAppearance.Default.Color,
+            _settings.ClickMarkerSize);
+    }
+
+    private string? RegisterRecordingHotkey()
+    {
+        _recordingHotkey ??= new GlobalHotkey(this, OnRecordingHotkeyPressed);
+        _activeHotkeyText = null;
+        if (!_settings.RecordingHotkeyEnabled)
+        {
+            _recordingHotkey.Unregister();
+            return null;
+        }
+
+        if (!HotkeyGesture.TryParse(_settings.RecordingHotkey, out var gesture) || !_recordingHotkey.Register(gesture))
+        {
+            return $"{_settings.RecordingHotkey} couldn't be registered. Another app may already use it.";
+        }
+
+        _activeHotkeyText = gesture.ToString();
+        return null;
+    }
+
+    /// <summary>The hotkey always starts a fresh guide, or stops the one being recorded.</summary>
+    private async void OnRecordingHotkeyPressed()
+    {
+        if (_hotkeyBusy || _settingsWindow is not null || _screenshotCaptureTargetStep is not null)
+        {
+            return;
+        }
+
+        _hotkeyBusy = true;
         try
         {
-            _settings = await _settingsService.LoadAsync();
-            ScreenshotMode = _settings.ScreenshotMode;
+            if (_isRecording)
+            {
+                await StopRecordingAsync();
+                return;
+            }
+
+            if (Steps.Count > 0)
+            {
+                await SaveSessionAsync(showMessage: false);
+                _editorWindow?.Hide();
+                ResetSession();
+            }
+
+            await StartRecordingAsync();
         }
         finally
         {
-            _loadingSettings = false;
+            _hotkeyBusy = false;
         }
+    }
+
+    private async void Settings_Click(object sender, RoutedEventArgs e)
+    {
+        _settingsWindow = new SettingsWindow(this, _settings, _activeHotkeyText) { Owner = this };
+        try
+        {
+            _settingsWindow.ShowDialog();
+        }
+        finally
+        {
+            _settingsWindow = null;
+        }
+
+        await SaveSettingsAsync();
     }
 
     private async Task SaveSettingsAsync()
@@ -182,7 +255,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             : "Restart as administrator to record administrator windows";
         if (_isElevated)
         {
-            AdminButton.Foreground = (System.Windows.Media.Brush)FindResource("AccentBrush");
+            AdminButton.SetResourceReference(ForegroundProperty, "AccentBrush");
         }
     }
 
@@ -294,7 +367,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async Task StartRecordingAsync()
     {
-        await LoadSettingsAsync();
         EnsureSession();
         StopHooks();
         _isRecording = true;
@@ -311,9 +383,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             _mouseHook.ClickCaptured += MouseHook_ClickCaptured;
             _mouseHook.Start();
 
-            _keyboardHook = new GlobalKeyboardHook(ShouldIgnoreKeyboard);
-            _keyboardHook.KeyboardInputCaptured += KeyboardHook_KeyboardInputCaptured;
-            _keyboardHook.Start();
+            if (_settings.RecordKeyboardInput)
+            {
+                _keyboardHook = new GlobalKeyboardHook(ShouldIgnoreKeyboard);
+                _keyboardHook.KeyboardInputCaptured += KeyboardHook_KeyboardInputCaptured;
+                _keyboardHook.Start();
+            }
 
             ShowRecordingTray();
             Hide();
@@ -471,7 +546,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             try
             {
                 var screenshot = await _screenshotService.CaptureAsync(GetSessionImagesDirectory(), step.Index, x, y, ScreenshotMode, resolution?.TargetHwnd ?? IntPtr.Zero, drawHighlight: false);
-                ApplyScreenshotResult(step, screenshot, clickMarkerLayer: true);
+                ApplyScreenshotResult(step, screenshot, clickMarkerLayer: true, showClickMarker: _settings.ShowClickMarker);
                 step.ScreenshotCaptured = true;
             }
             catch (Exception ex)
@@ -697,6 +772,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _isPaused = false;
         await FinalizePendingTypingAsync();
         _recordingStatusTimer.Stop();
+        RefreshRecordingStatus();
         StopHooks();
         HideRecordingTray();
         await RemoveTrailingStopNoiseStepAsync();
@@ -1319,6 +1395,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private async void MainWindow_Closing(object? sender, CancelEventArgs e)
     {
         StopHooks();
+        _recordingHotkey?.Dispose();
+        _recordingHotkey = null;
+        _recordingIndicator?.Close();
+        _recordingIndicator = null;
         if (_trayIcon is not null)
         {
             _trayIcon.Visible = false;
@@ -1417,13 +1497,32 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         if (_editorWindow == editorWindow)
         {
+            _session.Title = editorWindow.SessionTitle;
             _editorWindow = null;
         }
 
-        if (!_isRecording)
+        if (!_isRecording && !Dispatcher.HasShutdownStarted)
         {
-            Close();
+            // Stay running so the hotkey keeps working; the bar's close button quits the app.
+            _ = ReturnToBarAfterEditorClosedAsync();
         }
+    }
+
+    private async Task ReturnToBarAfterEditorClosedAsync()
+    {
+        try
+        {
+            await SaveSessionAsync(showMessage: false);
+        }
+        catch (Exception ex)
+        {
+            WinForms.MessageBox.Show($"The guide could not be saved:\n{ex.Message}", "OpenSteps", WinForms.MessageBoxButtons.OK, WinForms.MessageBoxIcon.Error);
+        }
+
+        ResetSession();
+        Show();
+        Activate();
+        RefreshRecordingStatus();
     }
 
     private string GetCurrentSessionTitle()
@@ -1542,6 +1641,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             RecordingStatusText.Text = string.Empty;
             RecordingDot.Visibility = Visibility.Collapsed;
+        }
+
+        // Picking a screenshot for an existing step reuses the recording hooks but isn't a recording.
+        if (_isRecording && _screenshotCaptureTargetStep is null)
+        {
+            _recordingIndicator ??= new RecordingIndicatorWindow();
+            _recordingIndicator.Update(_isPaused, DateTimeOffset.Now - _recordingStartedAt, Steps.Count, _activeHotkeyText);
+            _recordingIndicator.Show();
+        }
+        else
+        {
+            _recordingIndicator?.Hide();
         }
     }
 

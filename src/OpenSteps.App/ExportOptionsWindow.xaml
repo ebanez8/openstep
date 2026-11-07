@@ -4,7 +4,8 @@
         Title="Export options" Width="540" Height="420" MinWidth="460" MinHeight="360"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
-        Background="{StaticResource AppBackgroundBrush}">
+        Background="{DynamicResource AppBackgroundBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}">
     <Grid Margin="20">
         <Border Style="{StaticResource Card}" Padding="24">
             <Grid>
@@ -27,7 +28,7 @@
                 <ScrollViewer Grid.Row="1"
                               VerticalScrollBarVisibility="Auto">
                     <Border Style="{StaticResource Card}"
-                            Background="{StaticResource SubtleSurfaceBrush}"
+                            Background="{DynamicResource SubtleSurfaceBrush}"
                             Padding="16,14">
                         <StackPanel>
                             <CheckBox x:Name="MarkdownCheckBox" IsChecked="True">
@@ -41,7 +42,7 @@
                                 </StackPanel>
                             </CheckBox>
                             <Rectangle Height="1"
-                                       Fill="{StaticResource BorderSoftBrush}"
+                                       Fill="{DynamicResource BorderSoftBrush}"
                                        Margin="0,12,0,12" />
                             <CheckBox x:Name="HtmlCheckBox" IsChecked="True">
                                 <StackPanel>

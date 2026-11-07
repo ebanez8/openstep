@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Crop Screenshot" Width="980" Height="720" MinWidth="640" MinHeight="420"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource AppBackgroundBrush}">
+        Background="{DynamicResource AppBackgroundBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}">
     <DockPanel Margin="16">
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
             <Button Content="Reset Selection" Click="ResetSelection_Click"
@@ -15,8 +16,8 @@
                     Margin="10,0,0,0" Padding="16,0" Height="34" />
         </StackPanel>
 
-        <Border Background="{StaticResource SoftSurfaceBrush}"
-                BorderBrush="{StaticResource BorderSoftBrush}"
+        <Border Background="{DynamicResource SoftSurfaceBrush}"
+                BorderBrush="{DynamicResource BorderSoftBrush}"
                 BorderThickness="1"
                 CornerRadius="12"
                 ClipToBounds="True">
@@ -30,7 +31,7 @@
                         MouseLeftButtonUp="OverlayCanvas_MouseLeftButtonUp">
                     <Rectangle x:Name="SelectionRectangle"
                                Visibility="Collapsed"
-                               Stroke="{StaticResource AccentBrush}"
+                               Stroke="{DynamicResource AccentBrush}"
                                StrokeThickness="2"
                                Fill="#3311162A" />
                 </Canvas>

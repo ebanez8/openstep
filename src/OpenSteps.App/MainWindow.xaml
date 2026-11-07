@@ -4,9 +4,10 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="OpenSteps" Height="76" Width="780" MinHeight="76" MinWidth="780"
+        Title="OpenSteps" Height="76" Width="822" MinHeight="76" MinWidth="822"
         WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True"
-        Background="Transparent" Topmost="True">
+        Background="Transparent" Topmost="True"
+        Foreground="{DynamicResource TextPrimaryBrush}">
     <Window.Resources>
         <!--  Pill-shaped controls scoped to the floating recorder bar.  -->
         <Style x:Key="PillIconButton" TargetType="Button">
@@ -14,7 +15,7 @@
             <Setter Property="Height" Value="36" />
             <Setter Property="FontSize" Value="14" />
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
-            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="BorderThickness" Value="1" />
@@ -36,11 +37,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource SoftSurfaceBrush}" />
-                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource SoftSurfaceBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource PressedSurfaceBrush}" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource PressedSurfaceBrush}" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.45" />
@@ -52,8 +53,8 @@
         </Style>
 
         <Style x:Key="PrimaryPillIconButton" TargetType="Button" BasedOn="{StaticResource PillIconButton}">
-            <Setter Property="Background" Value="{StaticResource AccentBrush}" />
-            <Setter Property="Foreground" Value="{StaticResource TextInverseBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
             <Setter Property="Width" Value="44" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -68,10 +69,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource AccentHoverBrush}" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource AccentHoverBrush}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource AccentPressedBrush}" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource AccentPressedBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -80,7 +81,7 @@
         </Style>
 
         <Style x:Key="DangerPillIconButton" TargetType="Button" BasedOn="{StaticResource PrimaryPillIconButton}">
-            <Setter Property="Background" Value="{StaticResource RecordingBrush}" />
+            <Setter Property="Background" Value="{DynamicResource RecordingBrush}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -108,7 +109,7 @@
         <Style x:Key="Divider" TargetType="Rectangle">
             <Setter Property="Width" Value="1" />
             <Setter Property="Height" Value="24" />
-            <Setter Property="Fill" Value="{StaticResource BorderSoftBrush}" />
+            <Setter Property="Fill" Value="{DynamicResource BorderSoftBrush}" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Margin" Value="10,0" />
         </Style>
@@ -121,8 +122,8 @@
     </Window.Resources>
 
     <Grid Margin="12">
-        <Border Background="{StaticResource PanelBackgroundBrush}"
-                BorderBrush="{StaticResource BorderBrush}"
+        <Border Background="{DynamicResource PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 CornerRadius="14"
                 Padding="10,8">
@@ -139,7 +140,7 @@
                         Style="{StaticResource PillIconButton}"
                         Cursor="SizeAll" />
                 <TextBlock Text="OpenSteps"
-                           Foreground="{StaticResource TextPrimaryBrush}"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
                            FontWeight="SemiBold"
                            FontSize="13.5"
                            VerticalAlignment="Center"
@@ -149,7 +150,7 @@
 
                 <!--  Capture mode  -->
                 <TextBlock Text="Capture"
-                           Foreground="{StaticResource TextMutedBrush}"
+                           Foreground="{DynamicResource TextMutedBrush}"
                            FontSize="12"
                            VerticalAlignment="Center"
                            Margin="0,0,8,0" />
@@ -203,6 +204,11 @@
                         Click="RestartAsAdmin_Click"
                         Style="{StaticResource PillIconButton}"
                         Margin="2,0,0,0" />
+                <Button Content="&#xE713;"
+                        ToolTip="Settings"
+                        Click="Settings_Click"
+                        Style="{StaticResource PillIconButton}"
+                        Margin="2,0,0,0" />
 
                 <!--  Status  -->
                 <StackPanel x:Name="StatusPanel"
@@ -212,7 +218,7 @@
                             Margin="14,0,4,0">
                     <Ellipse x:Name="RecordingDot"
                              Width="9" Height="9"
-                             Fill="{StaticResource RecordingBrush}"
+                             Fill="{DynamicResource RecordingBrush}"
                              VerticalAlignment="Center"
                              Margin="0,0,8,0"
                              Visibility="Collapsed">
@@ -230,7 +236,7 @@
                         </Ellipse.Triggers>
                     </Ellipse>
                     <TextBlock x:Name="RecordingStatusText"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                FontSize="12.5"
                                VerticalAlignment="Center" />
                 </StackPanel>

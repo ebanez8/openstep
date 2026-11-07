@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Export complete" Width="660" Height="440" MinWidth="560" MinHeight="380"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource AppBackgroundBrush}">
+        Background="{DynamicResource AppBackgroundBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}">
     <Border Margin="20" Style="{StaticResource Card}" Padding="24">
         <DockPanel>
 
@@ -46,13 +47,13 @@
             <StackPanel DockPanel.Dock="Top">
                 <StackPanel Orientation="Horizontal">
                     <Border Width="36" Height="36"
-                            Background="#E7F7EE"
+                            Background="{DynamicResource SuccessSoftBrush}"
                             CornerRadius="10"
                             VerticalAlignment="Center">
                         <TextBlock Text="&#xE73E;"
                                    FontFamily="Segoe MDL2 Assets"
                                    FontSize="16"
-                                   Foreground="{StaticResource SuccessBrush}"
+                                   Foreground="{DynamicResource SuccessBrush}"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center" />
                     </Border>
@@ -74,8 +75,8 @@
 
                 <StackPanel Grid.Row="0">
                     <TextBlock Text="CREATED FILES" Style="{StaticResource CaptionText}" Margin="0,0,0,6" />
-                    <Border Background="{StaticResource SubtleSurfaceBrush}"
-                            BorderBrush="{StaticResource BorderSoftBrush}"
+                    <Border Background="{DynamicResource SubtleSurfaceBrush}"
+                            BorderBrush="{DynamicResource BorderSoftBrush}"
                             BorderThickness="1"
                             CornerRadius="8"
                             Padding="2">
@@ -99,11 +100,11 @@
                         <TextBlock Text="WARNINGS" Style="{StaticResource CaptionText}" />
                         <TextBlock x:Name="WarningsCount"
                                    Style="{StaticResource CaptionText}"
-                                   Foreground="{StaticResource WarningBrush}"
+                                   Foreground="{DynamicResource WarningBrush}"
                                    Margin="6,0,0,0" />
                     </StackPanel>
-                    <Border Background="{StaticResource SubtleSurfaceBrush}"
-                            BorderBrush="{StaticResource BorderSoftBrush}"
+                    <Border Background="{DynamicResource SubtleSurfaceBrush}"
+                            BorderBrush="{DynamicResource BorderSoftBrush}"
                             BorderThickness="1"
                             CornerRadius="8"
                             Padding="2">

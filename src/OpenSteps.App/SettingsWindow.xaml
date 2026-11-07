@@ -1,0 +1,313 @@
+<Window x:Class="OpenSteps.App.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="OpenSteps settings" Width="620" Height="760" MinWidth="520" MinHeight="420"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize"
+        Background="{DynamicResource AppBackgroundBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}">
+    <Window.Resources>
+        <Style x:Key="SectionCaption" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+            <Setter Property="Margin" Value="4,0,0,8" />
+        </Style>
+
+        <Style x:Key="RowTitle" TargetType="TextBlock" BasedOn="{StaticResource BodyText}">
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style x:Key="RowHint" TargetType="TextBlock" BasedOn="{StaticResource SubtleText}">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Margin" Value="0,2,16,0" />
+        </Style>
+
+        <Style x:Key="RowDivider" TargetType="Rectangle">
+            <Setter Property="Height" Value="1" />
+            <Setter Property="Fill" Value="{DynamicResource BorderSoftBrush}" />
+            <Setter Property="Margin" Value="0,14" />
+        </Style>
+
+        <!--  Round colour swatch; Background carries the colour.  -->
+        <Style x:Key="SwatchRadio" TargetType="RadioButton">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Grid Background="Transparent">
+                            <Ellipse x:Name="Ring"
+                                     Stroke="{DynamicResource TextPrimaryBrush}"
+                                     StrokeThickness="2"
+                                     Opacity="0" />
+                            <Ellipse Margin="5" Fill="{TemplateBinding Background}" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Ring" Property="Opacity" Value="0.35" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Ring" Property="Opacity" Value="1" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom"
+                Background="{DynamicResource PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderSoftBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="20,12">
+            <DockPanel>
+                <Button Content="Done"
+                        DockPanel.Dock="Right"
+                        Click="Done_Click"
+                        IsDefault="True"
+                        Padding="22,0" Height="34"
+                        Style="{StaticResource PrimaryActionButton}" />
+                <TextBlock Text="Changes apply right away."
+                           Style="{StaticResource SubtleText}"
+                           FontSize="12"
+                           VerticalAlignment="Center" />
+            </DockPanel>
+        </Border>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="20,20,20,24">
+                <TextBlock Text="Settings" Style="{StaticResource DisplayText}" FontSize="20" Margin="4,0,0,18" />
+
+                <!--  ─────────── Recording ─────────── -->
+                <TextBlock Text="RECORDING" Style="{StaticResource SectionCaption}" />
+                <Border Style="{StaticResource Card}" Padding="18,16" Margin="0,0,0,20">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Default capture mode" Style="{StaticResource RowTitle}" />
+                                <TextBlock Text="The bar starts in this mode each time OpenSteps opens. You can still switch on the bar for one recording."
+                                           Style="{StaticResource RowHint}" />
+                            </StackPanel>
+                            <ComboBox x:Name="CaptureModeCombo"
+                                      Grid.Column="1"
+                                      Width="170"
+                                      VerticalAlignment="Center"
+                                      SelectionChanged="CaptureModeCombo_SelectionChanged">
+                                <ComboBoxItem Content="Full Desktop" />
+                                <ComboBoxItem Content="Active Window" />
+                            </ComboBox>
+                        </Grid>
+
+                        <Rectangle Style="{StaticResource RowDivider}" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Start/stop hotkey" Style="{StaticResource RowTitle}" />
+                                <TextBlock Text="Works from any app. Press once to start a new recording, press again to stop."
+                                           Style="{StaticResource RowHint}" />
+                            </StackPanel>
+                            <CheckBox x:Name="HotkeyEnabledCheckBox"
+                                      Grid.Column="1"
+                                      VerticalAlignment="Center"
+                                      Checked="HotkeyEnabled_Changed"
+                                      Unchecked="HotkeyEnabled_Changed" />
+                        </Grid>
+                        <StackPanel x:Name="HotkeyPanel" Margin="0,10,0,0">
+                            <Button x:Name="HotkeyBox"
+                                     HorizontalAlignment="Left"
+                                     HorizontalContentAlignment="Left"
+                                     Width="220"
+                                     Height="34"
+                                     ToolTip="Click, then press the shortcut you want"
+                                     PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                     GotKeyboardFocus="HotkeyBox_GotKeyboardFocus"
+                                     LostKeyboardFocus="HotkeyBox_LostKeyboardFocus" />
+                            <TextBlock x:Name="HotkeyStatusText"
+                                       Style="{StaticResource RowHint}"
+                                       Margin="0,6,0,0"
+                                       Text="Click the button, then press a shortcut with Ctrl or Alt." />
+                        </StackPanel>
+
+                        <Rectangle Style="{StaticResource RowDivider}" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Record keyboard steps" Style="{StaticResource RowTitle}" />
+                                <TextBlock Text="Adds steps for typing, Enter, Tab and common shortcuts. The characters you type are never saved."
+                                           Style="{StaticResource RowHint}" />
+                            </StackPanel>
+                            <CheckBox x:Name="KeyboardCheckBox"
+                                      Grid.Column="1"
+                                      VerticalAlignment="Center"
+                                      Checked="KeyboardCheckBox_Changed"
+                                      Unchecked="KeyboardCheckBox_Changed" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!--  ─────────── Click marker ─────────── -->
+                <TextBlock Text="CLICK MARKER" Style="{StaticResource SectionCaption}" />
+                <Border Style="{StaticResource Card}" Padding="18,16" Margin="0,0,0,20">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Mark clicks on new steps" Style="{StaticResource RowTitle}" />
+                                <TextBlock Text="You can still show or hide the marker per step in the editor."
+                                           Style="{StaticResource RowHint}" />
+                            </StackPanel>
+                            <CheckBox x:Name="MarkerCheckBox"
+                                      Grid.Column="1"
+                                      VerticalAlignment="Center"
+                                      Checked="MarkerCheckBox_Changed"
+                                      Unchecked="MarkerCheckBox_Changed" />
+                        </Grid>
+
+                        <Rectangle Style="{StaticResource RowDivider}" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <StackPanel Margin="0,0,12,0">
+                                        <TextBlock Text="Style" Style="{StaticResource CaptionText}" Margin="0,0,0,6" />
+                                        <ComboBox x:Name="MarkerStyleCombo" Width="130" SelectionChanged="MarkerAppearance_Changed">
+                                            <ComboBoxItem Content="Ring" />
+                                            <ComboBoxItem Content="Filled circle" />
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="Size" Style="{StaticResource CaptionText}" Margin="0,0,0,6" />
+                                        <ComboBox x:Name="MarkerSizeCombo" Width="110" SelectionChanged="MarkerAppearance_Changed">
+                                            <ComboBoxItem Content="Small" />
+                                            <ComboBoxItem Content="Medium" />
+                                            <ComboBoxItem Content="Large" />
+                                        </ComboBox>
+                                    </StackPanel>
+                                </StackPanel>
+                                <TextBlock Text="Color" Style="{StaticResource CaptionText}" Margin="0,14,0,6" />
+                                <WrapPanel x:Name="MarkerSwatches" />
+                            </StackPanel>
+
+                            <Border Grid.Column="1"
+                                    Width="96" Height="96"
+                                    CornerRadius="10"
+                                    Background="{DynamicResource CanvasSurfaceBrush}"
+                                    BorderBrush="{DynamicResource BorderSoftBrush}"
+                                    BorderThickness="1"
+                                    VerticalAlignment="Top"
+                                    ToolTip="Preview">
+                                <Ellipse x:Name="MarkerPreview"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center" />
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!--  ─────────── Appearance ─────────── -->
+                <TextBlock Text="APPEARANCE" Style="{StaticResource SectionCaption}" />
+                <Border Style="{StaticResource Card}" Padding="18,16" Margin="0,0,0,20">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Theme" Style="{StaticResource RowTitle}" />
+                                <TextBlock Text="Use Windows setting follows light or dark mode as it changes."
+                                           Style="{StaticResource RowHint}" />
+                            </StackPanel>
+                            <ComboBox x:Name="ThemeCombo"
+                                      Grid.Column="1"
+                                      Width="190"
+                                      VerticalAlignment="Center"
+                                      SelectionChanged="ThemeCombo_SelectionChanged">
+                                <ComboBoxItem Content="Use Windows setting" />
+                                <ComboBoxItem Content="Light" />
+                                <ComboBoxItem Content="Dark" />
+                            </ComboBox>
+                        </Grid>
+
+                        <Rectangle Style="{StaticResource RowDivider}" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Accent color" Style="{StaticResource RowTitle}" />
+                                <TextBlock Text="Used for the record button, checkboxes and focus outlines."
+                                           Style="{StaticResource RowHint}" />
+                            </StackPanel>
+                            <ComboBox x:Name="AccentCombo"
+                                      Grid.Column="1"
+                                      Width="190"
+                                      VerticalAlignment="Center"
+                                      SelectionChanged="AccentCombo_SelectionChanged">
+                                <ComboBoxItem Content="Windows accent color" />
+                                <ComboBoxItem Content="OpenSteps graphite" />
+                                <ComboBoxItem Content="Custom" />
+                            </ComboBox>
+                        </Grid>
+                        <StackPanel x:Name="CustomAccentPanel" Margin="0,12,0,0">
+                            <WrapPanel x:Name="AccentSwatches" />
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <TextBlock Text="Hex" Style="{StaticResource CaptionText}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                <TextBox x:Name="AccentHexBox"
+                                         Width="110"
+                                         MaxLength="7"
+                                         TextChanged="AccentHexBox_TextChanged" />
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!--  ─────────── General ─────────── -->
+                <TextBlock Text="GENERAL" Style="{StaticResource SectionCaption}" />
+                <Border Style="{StaticResource Card}" Padding="18,16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Start with Windows" Style="{StaticResource RowTitle}" />
+                            <TextBlock x:Name="StartupHint"
+                                       Text="Open OpenSteps when you sign in to Windows."
+                                       Style="{StaticResource RowHint}" />
+                        </StackPanel>
+                        <CheckBox x:Name="StartupCheckBox"
+                                  Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  Checked="StartupCheckBox_Changed"
+                                  Unchecked="StartupCheckBox_Changed" />
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

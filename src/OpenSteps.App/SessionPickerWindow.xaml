@@ -4,7 +4,8 @@
         xmlns:local="clr-namespace:OpenSteps.App"
         Title="Saved guides" Width="820" Height="560" MinWidth="640" MinHeight="440"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource AppBackgroundBrush}">
+        Background="{DynamicResource AppBackgroundBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}">
     <Window.Resources>
         <local:FileImageConverter x:Key="FileImageConverter" />
     </Window.Resources>
@@ -12,8 +13,8 @@
 
         <!--  ─────────── Header ────────────────────────────────────── -->
         <Border DockPanel.Dock="Top"
-                Background="{StaticResource PanelBackgroundBrush}"
-                BorderBrush="{StaticResource BorderSoftBrush}"
+                Background="{DynamicResource PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderSoftBrush}"
                 BorderThickness="0,0,0,1"
                 Padding="24,18">
             <Grid>
@@ -53,13 +54,13 @@
                         VerticalAlignment="Center"
                         Visibility="Collapsed">
                 <Border Width="56" Height="56"
-                        Background="{StaticResource SoftSurfaceBrush}"
+                        Background="{DynamicResource SoftSurfaceBrush}"
                         CornerRadius="14"
                         HorizontalAlignment="Center">
                     <TextBlock Text="&#xE8B7;"
                                FontFamily="Segoe MDL2 Assets"
                                FontSize="22"
-                               Foreground="{StaticResource TextMutedBrush}"
+                               Foreground="{DynamicResource TextMutedBrush}"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center" />
                 </Border>
@@ -92,8 +93,8 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Border x:Name="SessionCard"
-                                    Background="{StaticResource PanelBackgroundBrush}"
-                                    BorderBrush="{StaticResource BorderSoftBrush}"
+                                    Background="{DynamicResource PanelBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderSoftBrush}"
                                     BorderThickness="1"
                                     CornerRadius="12"
                                     Margin="0,0,12,12"
@@ -110,7 +111,7 @@
                                     <Style TargetType="Border">
                                         <Style.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="BorderBrush" Value="{StaticResource BorderEmphasisBrush}" />
+                                                <Setter Property="BorderBrush" Value="{DynamicResource BorderEmphasisBrush}" />
                                             </Trigger>
                                         </Style.Triggers>
                                     </Style>
@@ -124,7 +125,7 @@
 
                                     <!--  Thumbnail  -->
                                     <Border Grid.Row="0"
-                                            Background="{StaticResource SoftSurfaceBrush}"
+                                            Background="{DynamicResource SoftSurfaceBrush}"
                                             CornerRadius="11,11,0,0"
                                             ClipToBounds="True">
                                         <Grid>
@@ -134,7 +135,7 @@
                                                     ToolTip="Delete guide"
                                                     Click="Delete_Click"
                                                     Style="{StaticResource IconButton}"
-                                                    Background="#CCFFFFFF"
+                                                    Background="{DynamicResource OverlayButtonBrush}"
                                                     HorizontalAlignment="Right"
                                                     VerticalAlignment="Top"
                                                     Margin="8" />
@@ -146,18 +147,18 @@
                                         <TextBlock Text="{Binding Title}"
                                                    FontSize="14"
                                                    FontWeight="SemiBold"
-                                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                                    TextTrimming="CharacterEllipsis" />
                                         <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                            <TextBlock Foreground="{StaticResource TextMutedBrush}" FontSize="12">
+                                            <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="12">
                                                 <Run Text="{Binding StepCount, Mode=OneWay}" />
                                                 <Run Text=" steps" />
                                             </TextBlock>
                                             <TextBlock Text=" · "
-                                                       Foreground="{StaticResource TextMutedBrush}"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
                                                        FontSize="12" />
                                             <TextBlock Text="{Binding UpdatedAt, StringFormat={}{0:MMM d\, yyyy}}"
-                                                       Foreground="{StaticResource TextMutedBrush}"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
                                                        FontSize="12" />
                                         </StackPanel>
                                     </StackPanel>

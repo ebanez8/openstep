@@ -26,6 +26,31 @@ public sealed class ClickMarkerTests
     }
 
     [Fact]
+    public void Render_FilledStyleUsesConfiguredColorAndCoversCenter()
+    {
+        var temp = CreateTempDirectory();
+        var source = Path.Combine(temp, "clean.png");
+        var output = Path.Combine(temp, "marked.png");
+        CreateWhiteImage(source);
+
+        var previous = ClickMarkerRenderer.Appearance;
+        try
+        {
+            ClickMarkerRenderer.Appearance = new ClickMarkerAppearance(ClickMarkerStyle.Filled, Color.FromArgb(37, 99, 235), ClickMarkerSize.Small);
+            ClickMarkerRenderer.Render(source, output, 50, 50);
+        }
+        finally
+        {
+            ClickMarkerRenderer.Appearance = previous;
+        }
+
+        using var marked = new Bitmap(output);
+        var center = marked.GetPixel(50, 50);
+        Assert.True(center.B > center.R, "Filled marker should tint the click point with the configured color.");
+        Assert.Equal(Color.White.ToArgb(), marked.GetPixel(72, 50).ToArgb());
+    }
+
+    [Fact]
     public void EffectiveScreenshotPath_UsesMarkedImageOnlyWhileMarkerIsShown()
     {
         var temp = CreateTempDirectory();
